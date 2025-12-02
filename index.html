@@ -2,95 +2,109 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Digital ColdBrew — Home</title>
-  <meta name="description" content="Digital ColdBrew — Digital marketing & production" />
+  <meta name="description" content="Digital ColdBrew — Digital marketing & creative production" />
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="site-header" role="banner">
-    <div class="container header-inner">
-      <a class="brand" href="index.html" aria-label="Home">
-        <img src="logo.png" alt="Digital ColdBrew logo" class="brand-logo" onerror="this.style.display='none'">
-        <span class="brand-text">Digital<span class="accent">ColdBrew</span></span>
-      </a>
-
-      <nav class="main-nav" role="navigation" aria-label="Main navigation">
-        <button id="menu-toggle" aria-expanded="false" aria-controls="nav-list">Menu</button>
-        <ul id="nav-list" class="nav-list">
-          <li><a href="index.html" class="active">Home</a></li>
-          <li><a href="about.html">About</a></li>
-          <li><a href="services.html">Services</a></li>
-          <li><a href="studio.html">Studio</a></li>
-          <li><a href="portfolio.pdf" target="_blank" rel="noopener">Portfolio</a></li>
-          <li><a href="contact.html">Contact</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <main id="main" class="container" role="main">
-    <section class="hero" aria-labelledby="hero-title">
-      <h1 id="hero-title">Beautiful content. Smart results.</h1>
-      <p class="lead">Digital marketing + creative production for men's fashion & lifestyle.</p>
-      <p class="buttons">
-        <a class="cta" href="services.html">See Services</a>
-        <a class="cta outline" href="portfolio.pdf" target="_blank" rel="noopener">View Portfolio (PDF)</a>
-      </p>
-    </section>
-
-    <section id="quick" class="card-grid" aria-labelledby="quick-title">
-      <h2 id="quick-title">Explore</h2>
-      <div class="card">
-        <h3><a href="services.html">Digital Marketing</a></h3>
-        <p>SEO, paid ads, social growth, and analytics to move the needle.</p>
-      </div>
-      <div class="card">
-        <h3><a href="studio.html">Studio & Sets</a></h3>
-        <p>Six indoor POP sets, lighting, styling & on-site post-production.</p>
-      </div>
-      <div class="card">
-        <h3><a href="contact.html">Book a Shoot</a></h3>
-        <p>Get a quote or schedule a site visit — quick response.</p>
-      </div>
-    </section>
-
-    <section id="testimonials" aria-labelledby="testimonials-title">
-      <h2 id="testimonials-title">What clients say</h2>
-      <div class="card">
-        <p>"Fast, creative, and ROI-driven campaigns — highly recommended."</p>
-        <p class="muted">— Happy Client</p>
-      </div>
-    </section>
-  </main>
-
-  <!-- Decorative animated glass (aria-hidden since it's decorative) -->
-  <div id="coffee-illustration" aria-hidden="true">
-    <svg viewBox="0 0 200 240" class="coffee-svg" xmlns="http://www.w3.org/2000/svg" role="img">
+  <!-- full-screen glass + liquid overlay -->
+  <div id="glass-wrap" aria-hidden="true">
+    <!-- full-viewport SVG representing a tall glass shape; liquid is a rect clipped to the glass -->
+    <svg id="glass-svg" viewBox="0 0 600 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="coffeeGrad" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#a36c3a" />
-          <stop offset="100%" stop-color="#6b3f2a" />
-        </linearGradient>
-        <clipPath id="glassClip">
-          <rect x="20" y="10" width="160" height="200" rx="18" ry="18"/>
+        <!-- glass shape path (rounded rectangle with a small lip) -->
+        <clipPath id="glass-clip">
+          <path id="glass-path" d="M150 30
+            Q140 20 150 10
+            L450 10 Q460 20 450 30
+            L420 920 Q420 970 300 980 Q180 970 180 920 Z" />
         </clipPath>
+
+        <!-- gradient for the liquid -->
+        <linearGradient id="brewGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#b77a46"/>
+          <stop offset="100%" stop-color="#5a3728"/>
+        </linearGradient>
+
+        <!-- a simple wave shape to top the liquid for realism -->
+        <path id="wave" d="M0 0 C80 14,160 -10,240 6 C320 22,400 -6,480 8 C560 22,640 2,720 10 L720 60 L0 60 Z"/>
       </defs>
 
-      <rect x="18" y="8" width="164" height="204" rx="20" ry="20" fill="rgba(255,255,255,0.06)" stroke="rgba(0,0,0,0.08)" stroke-width="3"/>
-      <g clip-path="url(#glassClip)">
-        <path id="coffee-liquid" d="M0,180 C40,165 120,195 200,170 L200,240 L0,240 Z" fill="url(#coffeeGrad)" transform="translate(0,0)" />
-        <circle id="drop" cx="160" cy="170" r="6" fill="#6b3f2a" opacity="0.95"/>
+      <!-- faint glass outer stroke -->
+      <g transform="translate( -60 -10 )">
+        <use href="#glass-path" fill="rgba(255,255,255,0.02)" stroke="rgba(0,0,0,0.06)" stroke-width="6"/>
       </g>
-      <path d="M40 30 C60 20, 140 20, 160 30" stroke="rgba(255,255,255,0.12)" stroke-width="3" fill="none"/>
+
+      <!-- group clipped to the glass shape -->
+      <g clip-path="url(#glass-clip)">
+        <!-- background inside the glass (glass inner) -->
+        <rect x="0" y="0" width="600" height="1000" fill="rgba(255,255,255,0.02)"/>
+
+        <!-- liquid rectangle - we will transform translateY to make it rise -->
+        <g id="liquid-group" transform="translate(0,720)">
+          <rect id="liquid-rect" x="0" y="0" width="600" height="1000" fill="url(#brewGrad)"/>
+          <!-- moving wave on top of the liquid -->
+          <g id="wave-group" transform="translate(-60,-40)" opacity="0.95">
+            <use href="#wave" fill="rgba(0,0,0,0.08)"/>
+            <use href="#wave" fill="rgba(255,255,255,0.06)" transform="translate(0,6) scale(0.98,0.7)"/>
+          </g>
+        </g>
+
+        <!-- small pour stream (visible while progress small-to-mid) -->
+        <g id="pour" transform="translate(420, -30)" opacity="0">
+          <path id="stream" d="M0 0 C6 40 8 90 6 140 C4 190 12 240 4 300" stroke="url(#brewGrad)" stroke-width="12" stroke-linecap="round" fill="none" stroke-linejoin="round" opacity="0.95"/>
+          <circle id="drip-top" cx="0" cy="10" r="6" fill="#5a3728" />
+        </g>
+
+        <!-- a few droplets that fall as part of pour effect -->
+        <g id="droplets" opacity="0">
+          <circle class="drop" cx="480" cy="80" r="8" fill="#4f2e20" opacity="0.95"/>
+          <circle class="drop" cx="490" cy="140" r="6" fill="#5a3728" opacity="0.9"/>
+        </g>
+      </g>
     </svg>
   </div>
 
-  <footer class="site-footer" role="contentinfo">
-    <div class="container">
-      <p>&copy; <span id="year"></span> Digital ColdBrew — All rights reserved.</p>
-    </div>
-  </footer>
+  <!-- actual site content — hidden until glass is full -->
+  <main id="site-content" class="hidden" role="main" aria-live="polite">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="index.html" aria-label="Home">
+          <img src="logo.png" alt="Digital ColdBrew logo" class="brand-logo" onerror="this.style.display='none'">
+          <span class="brand-text">Digital<span class="accent">ColdBrew</span></span>
+        </a>
+        <nav class="main-nav" role="navigation">
+          <ul class="nav-list">
+            <li><a href="index.html" class="active">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="services.html">Services</a></li>
+            <li><a href="studio.html">Studio</a></li>
+            <li><a href="portfolio.pdf" target="_blank" rel="noopener">Portfolio</a></li>
+            <li><a href="contact.html">Contact</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <section class="welcome container">
+      <h1>Digital ColdBrew</h1>
+      <p class="lead">Beautiful content. Smart results.</p>
+      <a class="cta" href="portfolio.pdf" target="_blank">View Portfolio</a>
+    </section>
+
+    <!-- you can keep the rest of your multi-page content below -->
+    <section class="container">
+      <h2>Our Services</h2>
+      <p>We combine creative production and sharp digital marketing for apparel & lifestyle brands.</p>
+    </section>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>&copy; <span id="year"></span> Digital ColdBrew</p>
+      </div>
+    </footer>
+  </main>
 
   <script src="script.js"></script>
 </body>

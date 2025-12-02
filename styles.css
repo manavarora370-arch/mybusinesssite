@@ -1,97 +1,58 @@
 :root{
-  --bg:#efe0cf;        /* light coffee milk */
-  --card:rgba(255,255,255,0.92);
-  --accent:#6b3f2a;    /* coffee dark */
-  --accent-2:#a36c3a;  /* lighter coffee */
+  --bg:#efe0cf;        /* page behind glass (light coffee milk) */
   --text:#2b2b2b;
+  --accent:#6b3f2a;
   --muted:#5b5047;
   --maxw:1100px;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 *{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  background: linear-gradient(180deg, var(--bg) 0%, #efdbc2 100%);
-  color:var(--text);
-  line-height:1.45;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  overflow-x:hidden;
-}
-.container{max-width:var(--maxw); margin:0 auto; padding:1.3rem}
-.header-inner{display:flex; justify-content:space-between; align-items:center; gap:1rem}
-.brand{display:flex; align-items:center; gap:.6rem; text-decoration:none; color:var(--text)}
-.brand-logo{width:44px; height:44px; object-fit:cover; border-radius:8px; display:inline-block}
-.brand-text{font-weight:800; font-size:1.25rem}
-.brand .accent{color:var(--accent)}
-#menu-toggle{display:none}
-.main-nav .nav-list{display:flex; gap:1rem; list-style:none; padding:0; margin:0}
-.main-nav a{color:var(--text); text-decoration:none; padding:.4rem .6rem; border-radius:8px}
-.main-nav a.active, .main-nav a:focus, .main-nav a:hover{outline:2px solid rgba(0,0,0,0.02); background:rgba(255,255,255,0.72)}
+html,body{height:100%; margin:0; background:var(--bg);}
+body{overflow-x:hidden; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; color:var(--text)}
 
-.hero{
-  padding:4.5rem 1rem 3rem;
-  text-align:left;
-}
-.hero h1{
-  font-size:clamp(1.8rem,4.2vw,3.2rem);
-  margin:0 0 .6rem;
-  letter-spacing:-0.02em;
-}
-.lead{opacity:.95; margin-bottom:1rem; color:var(--muted)}
-.buttons{display:flex; gap:.6rem; margin-top:1rem}
-.cta{display:inline-block; background:var(--accent); color:#fff; padding:.6rem 1rem; border-radius:10px; text-decoration:none}
-.cta.outline{background:transparent; color:var(--accent-2); border:2px solid rgba(107,63,42,0.12)}
-
-.card-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin:2rem 0}
-.card{background:var(--card); padding:1.1rem; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); color:var(--text)}
-
-.gallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem; margin-top:1rem}
-.gallery img{width:100%; height:auto; display:block; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.06)}
-
-.container article, .container section{margin:1rem 0}
-.site-footer{padding:1.2rem 0; text-align:center; margin-top:2.5rem; color:var(--muted)}
-
-/* coffee glass position + animation */
-#coffee-illustration{
+/* glass wrapper covers the full viewport and sits on top of the page until filled */
+#glass-wrap{
   position:fixed;
-  right:18px;
-  bottom:18px;
-  width:160px;
-  height:192px;
-  pointer-events:none;
-  z-index:40;
-  opacity:0.95;
-  transform-origin:center;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  pointer-events:none; /* allow scroll events to pass */
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
 }
-.coffee-svg{width:100%; height:100%; transform:translateY(0); transition:transform .25s ease}
 
-/* slosh animation for liquid */
-@keyframes slosh {
-  0%{ transform: translateX(0) translateY(0) }
-  25%{ transform: translateX(-4px) translateY(-2px) }
-  50%{ transform: translateX(0) translateY(0) }
-  75%{ transform: translateX(4px) translateY(-2px) }
-  100%{ transform: translateX(0) translateY(0) }
-}
-#coffee-liquid{ transform-origin: center; animation: slosh 3.6s ease-in-out infinite; }
+/* svg scales to fill viewport nicely while preserving glass proportions */
+#glass-svg{ width:100vw; height:100vh; display:block; }
 
-/* drop falling animation */
-@keyframes dropfall {
-  0%{ transform: translateY(-6px); opacity:0 }
-  10%{ opacity:1; transform: translateY(0) }
-  70%{ transform: translateY(14px); opacity:1 }
-  100%{ transform: translateY(24px); opacity:0 }
-}
-#drop{ animation: dropfall 4.2s linear infinite; animation-delay:1s; }
+/* site content initially hidden until glass fills */
+#site-content.hidden{ opacity:0; pointer-events:none; user-select:none; transform:translateY(12px); transition:opacity .6s ease, transform .6s ease; }
+#site-content.visible{ opacity:1; pointer-events:auto; user-select:auto; transform:none; transition:opacity .8s ease, transform .6s ease; z-index:10; position:relative; }
 
-/* responsive adjustments */
+/* basic header/content styles (kept simple) */
+.container{ max-width:var(--maxw); margin:0 auto; padding:1.25rem; }
+.header-inner{ display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+.brand{ display:flex; align-items:center; gap:.6rem; text-decoration:none; color:var(--text); }
+.brand-logo{ width:44px; height:44px; object-fit:cover; border-radius:8px; display:inline-block; }
+.brand-text{ font-weight:800; font-size:1.25rem; }
+.brand .accent{ color:var(--accent); }
+
+.main-nav .nav-list{ display:flex; gap:1rem; list-style:none; margin:0; padding:0; }
+.main-nav a{ color:var(--text); text-decoration:none; padding:.4rem .6rem; border-radius:8px; }
+.main-nav a:hover{ background:rgba(0,0,0,0.03); }
+
+.welcome{ text-align:center; padding-top:6rem; padding-bottom:4rem; }
+.welcome h1{ font-size:clamp(1.6rem,4.5vw,3.6rem); margin:0 0 .5rem; letter-spacing:-0.02em; }
+.lead{ color:var(--muted); margin-bottom:1rem; }
+.cta{ display:inline-block; background:var(--accent); color:#fff; padding:.6rem 1rem; border-radius:10px; text-decoration:none; }
+
+/* pour & droplet visibility controlled by JS via .active state */
+.pour-visible{ opacity:1; transition:opacity .3s ease; }
+.drops-visible{ opacity:1; transition:opacity .15s linear; }
+
+/* responsive */
 @media (max-width:720px){
-  #coffee-illustration{ width:120px; height:144px; right:12px; bottom:12px }
-  .brand-text{font-size:1rem}
-  .hero{padding:3rem 1rem}
-  .main-nav .nav-list{display:none}
-  #menu-toggle{display:inline-block}
-  .main-nav .nav-list.open{display:flex; flex-direction:column; gap:.6rem; background:transparent; position:absolute; top:64px; right:10px; padding:1rem}
+  .brand-text{ font-size:1rem; }
+  .welcome{ padding-top:4rem; padding-bottom:2rem; }
+  #glass-svg{ /* ensure good crop on phones */ object-fit:cover; }
 }

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Your Business Name — Home</title>
+  <meta name="description" content="Aesthetic, accessible website for Your Business Name" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header" role="banner">
+    <div class="container header-inner">
+      <a class="brand" href="#" aria-label="Home">Your<span class="accent">Brand</span></a>
+      <nav class="main-nav" role="navigation" aria-label="Main navigation">
+        <button id="menu-toggle" aria-expanded="false" aria-controls="nav-list">Menu</button>
+        <ul id="nav-list" class="nav-list">
+          <li><a href="#services">Services</a></li>
+          <li><a href="#studio">Production House</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container" role="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title">Beautiful content. Smart results.</h1>
+      <p class="lead">Digital marketing + in-house production sets for men’s clothing & aesthetic shoots.</p>
+      <p><a class="cta" href="#contact">Get a Quote</a></p>
+    </section>
+
+    <section id="services" class="card-grid" aria-labelledby="services-title">
+      <h2 id="services-title">What we do</h2>
+      <div class="card">
+        <h3>Digital Marketing</h3>
+        <p>SEO, Ads, Social strategy, performance analytics.</p>
+      </div>
+      <div class="card">
+        <h3>Production House</h3>
+        <p>6 indoor POP sets, lighting, styling & on-site post-production.</p>
+      </div>
+      <div class="card">
+        <h3>Photography & E-Commerce</h3>
+        <p>Aesthetic shoots optimized for product pages and ads.</p>
+      </div>
+    </section>
+
+    <section id="studio" aria-labelledby="studio-title">
+      <h2 id="studio-title">Production House — Our Sets</h2>
+      <div class="gallery">
+        <figure>
+          <img src="https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=60" alt="Set 1: Warm studio">
+          <figcaption>Set 1 — Urban Brick</figcaption>
+        </figure>
+        <figure>
+          <img src="https://images.unsplash.com/photo-1526178610992-6f1b6021f9c3?auto=format&fit=crop&w=1200&q=60" alt="Set 2: Minimal white">
+          <figcaption>Set 2 — Minimal White</figcaption>
+        </figure>
+        <figure>
+          <img src="https://images.unsplash.com/photo-1504198453319-5ce911bafcde?auto=format&fit=crop&w=1200&q=60" alt="Set 3: Moody studio">
+          <figcaption>Set 3 — Moody Spotlight</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="pricing" aria-labelledby="pricing-title">
+      <h2 id="pricing-title">Pricing (example)</h2>
+      <ul>
+        <li>Studio half-day (4 hours): ₹8,000</li>
+        <li>Full-day production: ₹15,000</li>
+        <li>Digital marketing starter package: ₹12,000 / month</li>
+      </ul>
+    </section>
+
+    <section id="contact" aria-labelledby="contact-title" class="contact">
+      <h2 id="contact-title">Contact us</h2>
+      <form id="contactForm" action="#" method="post" aria-label="Contact form (demo)">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" required aria-required="true" />
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required />
+        <label for="message">Message</label>
+        <textarea id="message" name="message" rows="5" required></textarea>
+        <button type="submit" class="cta">Send</button>
+        <p id="formStatus" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <p>&copy; <span id="year"></span> Your Business Name — All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

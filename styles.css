@@ -1,8 +1,8 @@
 :root{
   --bg:#efe0cf;
-  --text:#2b2b2b;
+  --text:#231f20;
   --accent:#6b3f2a;
-  --muted:#5b5047;
+  --muted:#6d5d53;
   --maxw:1100px;
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
@@ -10,39 +10,42 @@
 html,body{height:100%; margin:0; background:var(--bg); -webkit-font-smoothing:antialiased;}
 body{color:var(--text);}
 
-/* Overlay */
-#overlay{ position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; pointer-events:none; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); transition:opacity .6s ease; }
-#glass-wrap{ width:100vw; height:100vh; transform-style:preserve-3d; will-change:transform; }
-/* svg should cover viewport nicely */
+/* overlay */
+#intro-overlay{
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  z-index:10000; pointer-events:none; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+}
+#glass-scene{ width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; transform-style:preserve-3d; }
 #glass-svg{ width:100vw; height:100vh; display:block; }
 
-/* Skip button */
-#skipBtn{ position:fixed; top:20px; right:20px; z-index:10010; pointer-events:auto; background:rgba(255,255,255,0.95); color:#000; border:none; padding:8px 12px; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+/* overlay UI (skip/hint) */
+#intro-ui{ position:fixed; top:18px; right:18px; z-index:10010; pointer-events:auto; display:flex; gap:10px; align-items:center; }
+#skip-btn{ padding:.5rem .8rem; border-radius:8px; border:none; background:rgba(0,0,0,0.06); cursor:pointer; font-weight:700; color:var(--text) }
+#hint{ font-weight:600; font-size:13px; color:rgba(0,0,0,0.6); background:rgba(255,255,255,0.85); padding:.4rem .7rem; border-radius:18px; }
 
-/* site hidden until reveal */
-.site.hidden{ opacity:0; pointer-events:none; transform:translateY(10px); transition:opacity .6s ease, transform .6s ease; }
-.site.visible{ opacity:1; pointer-events:auto; transform:none; transition:opacity .8s ease, transform .6s ease; z-index:10; position:relative; }
+/* site visibility toggle */
+.site.hidden{ opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .6s ease, transform .6s ease; }
+.site.visible{ opacity:1; transform:none; pointer-events:auto; transition:opacity .6s ease .1s; z-index:10; position:relative; }
 
-/* basic site layout */
-.container{ max-width:var(--maxw); margin:0 auto; padding:1.2rem; }
+/* site basic layout */
+.container{ max-width:var(--maxw); margin:0 auto; padding:1.25rem; }
 .header-inner{ display:flex; justify-content:space-between; align-items:center; gap:1rem; }
 .brand{ display:flex; align-items:center; gap:.6rem; text-decoration:none; color:var(--text); }
 .brand-logo{ width:44px; height:44px; border-radius:8px; object-fit:cover; display:inline-block; }
 .brand-text{ font-weight:800; font-size:1.25rem; }
 .brand .accent{ color:var(--accent); }
-
 .main-nav .nav-list{ display:flex; gap:1rem; list-style:none; margin:0; padding:0; }
 .main-nav a{ color:var(--text); text-decoration:none; padding:.4rem .6rem; border-radius:8px; }
-.main-nav a:hover{ background:rgba(0,0,0,0.03); }
 
+/* hero */
 .welcome{ text-align:center; padding-top:6rem; padding-bottom:3rem; }
-.welcome h1{ font-size:clamp(1.6rem,4.5vw,3.6rem); margin:0 0 .5rem; letter-spacing:-0.02em; }
+.welcome h1{ font-size:clamp(1.6rem,4.5vw,3.6rem); margin:0 0 .5rem; }
 .lead{ color:var(--muted); margin-bottom:1rem; }
-.cta{ display:inline-block; background:var(--accent); color:#fff; padding:.6rem 1rem; border-radius:10px; text-decoration:none; }
+.cta{ background:var(--accent); color:#fff; padding:.6rem 1rem; border-radius:10px; text-decoration:none; }
 
-/* responsive tweaks */
+/* responsive */
 @media (max-width:720px){
-  #skipBtn{ top:12px; right:12px; padding:6px 10px; font-size:13px; }
+  #hint{ display:none; }
   .brand-text{ font-size:1rem; }
   .welcome{ padding-top:4rem; padding-bottom:2rem; }
 }

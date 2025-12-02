@@ -1,35 +1,97 @@
 :root{
-  --bg:#0f1724; --card:#0b1220; --accent:#ff6b6b; --text:#e6eef8;
-  --maxw:1100px; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --bg:#efe0cf;        /* light coffee milk */
+  --card:rgba(255,255,255,0.92);
+  --accent:#6b3f2a;    /* coffee dark */
+  --accent-2:#a36c3a;  /* lighter coffee */
+  --text:#2b2b2b;
+  --muted:#5b5047;
+  --maxw:1100px;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 *{box-sizing:border-box}
-body{margin:0; background:linear-gradient(180deg,#071021 0%,#0b1220 100%); color:var(--text); line-height:1.5}
-.container{max-width:var(--maxw); margin:0 auto; padding:1.2rem}
+html,body{height:100%}
+body{
+  margin:0;
+  background: linear-gradient(180deg, var(--bg) 0%, #efdbc2 100%);
+  color:var(--text);
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden;
+}
+.container{max-width:var(--maxw); margin:0 auto; padding:1.3rem}
 .header-inner{display:flex; justify-content:space-between; align-items:center; gap:1rem}
-.brand{font-weight:700; text-decoration:none; color:var(--text); font-size:1.25rem}
+.brand{display:flex; align-items:center; gap:.6rem; text-decoration:none; color:var(--text)}
+.brand-logo{width:44px; height:44px; object-fit:cover; border-radius:8px; display:inline-block}
+.brand-text{font-weight:800; font-size:1.25rem}
 .brand .accent{color:var(--accent)}
 #menu-toggle{display:none}
 .main-nav .nav-list{display:flex; gap:1rem; list-style:none; padding:0; margin:0}
 .main-nav a{color:var(--text); text-decoration:none; padding:.4rem .6rem; border-radius:8px}
-.main-nav a:focus, .main-nav a:hover{outline:2px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02)}
+.main-nav a.active, .main-nav a:focus, .main-nav a:hover{outline:2px solid rgba(0,0,0,0.02); background:rgba(255,255,255,0.72)}
 
-.hero{padding:3rem 1rem; text-align:left}
-.hero h1{font-size:clamp(1.6rem,3.5vw,2.4rem); margin:0 0 .5rem}
-.lead{opacity:.9; margin-bottom:1rem}
+.hero{
+  padding:4.5rem 1rem 3rem;
+  text-align:left;
+}
+.hero h1{
+  font-size:clamp(1.8rem,4.2vw,3.2rem);
+  margin:0 0 .6rem;
+  letter-spacing:-0.02em;
+}
+.lead{opacity:.95; margin-bottom:1rem; color:var(--muted)}
+.buttons{display:flex; gap:.6rem; margin-top:1rem}
 .cta{display:inline-block; background:var(--accent); color:#fff; padding:.6rem 1rem; border-radius:10px; text-decoration:none}
-.card-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin:1rem 0}
-.card{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)); padding:1rem; border-radius:12px; box-shadow:0 6px 16px rgba(2,6,23,.6)}
+.cta.outline{background:transparent; color:var(--accent-2); border:2px solid rgba(107,63,42,0.12)}
 
-.gallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem}
-.gallery img{width:100%; height:auto; display:block; border-radius:8px}
-.contact form{display:grid; gap:.5rem; max-width:600px}
-input, textarea{padding:.6rem; border-radius:8px; border:1px solid rgba(255,255,255,.06); background:transparent; color:var(--text)}
-button.cta{border:none; cursor:pointer}
+.card-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin:2rem 0}
+.card{background:var(--card); padding:1.1rem; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); color:var(--text)}
 
-.site-footer{padding:1rem 0; opacity:.9; text-align:center; margin-top:2rem; border-top:1px solid rgba(255,255,255,.03)}
+.gallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem; margin-top:1rem}
+.gallery img{width:100%; height:auto; display:block; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.06)}
 
+.container article, .container section{margin:1rem 0}
+.site-footer{padding:1.2rem 0; text-align:center; margin-top:2.5rem; color:var(--muted)}
+
+/* coffee glass position + animation */
+#coffee-illustration{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  width:160px;
+  height:192px;
+  pointer-events:none;
+  z-index:40;
+  opacity:0.95;
+  transform-origin:center;
+}
+.coffee-svg{width:100%; height:100%; transform:translateY(0); transition:transform .25s ease}
+
+/* slosh animation for liquid */
+@keyframes slosh {
+  0%{ transform: translateX(0) translateY(0) }
+  25%{ transform: translateX(-4px) translateY(-2px) }
+  50%{ transform: translateX(0) translateY(0) }
+  75%{ transform: translateX(4px) translateY(-2px) }
+  100%{ transform: translateX(0) translateY(0) }
+}
+#coffee-liquid{ transform-origin: center; animation: slosh 3.6s ease-in-out infinite; }
+
+/* drop falling animation */
+@keyframes dropfall {
+  0%{ transform: translateY(-6px); opacity:0 }
+  10%{ opacity:1; transform: translateY(0) }
+  70%{ transform: translateY(14px); opacity:1 }
+  100%{ transform: translateY(24px); opacity:0 }
+}
+#drop{ animation: dropfall 4.2s linear infinite; animation-delay:1s; }
+
+/* responsive adjustments */
 @media (max-width:720px){
+  #coffee-illustration{ width:120px; height:144px; right:12px; bottom:12px }
+  .brand-text{font-size:1rem}
+  .hero{padding:3rem 1rem}
+  .main-nav .nav-list{display:none}
   #menu-toggle{display:inline-block}
-  .main-nav .nav-list{display:none; flex-direction:column; background:transparent}
-  .main-nav .nav-list.open{display:flex}
+  .main-nav .nav-list.open{display:flex; flex-direction:column; gap:.6rem; background:transparent; position:absolute; top:64px; right:10px; padding:1rem}
 }

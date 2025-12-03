@@ -32,99 +32,113 @@
 
 
   <script id="fragmentShader" type="x-shader/x-fragment">
-    precision highp float;
-    uniform float u_time;
-    uniform vec2 u_resolution;
-    uniform vec2 u_mouse;
-    uniform float u_scroll;
+precision highp float;
 
-    // 2D noise - small, fast
-    float hash(vec2 p) {
-      p = fract(p * vec2(123.34, 456.21));
-      p += dot(p, p + 45.32);
-      return fract(p.x * p.y);
-    }
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_scroll;
 
-    float noise(in vec2 p) {
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-      // four corners
-      float a = hash(i);
-      float b = hash(i + vec2(1.0, 0.0));
-      float c = hash(i + vec2(0.0, 1.0));
-      float d = hash(i + vec2(1.0, 1.0));
-      vec2 u = f * f * (3.0 - 2.0 * f);
-      return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-    }
+// --- helpers ---
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
 
-    // fbm for smoother waves
-    float fbm(vec2 p) {
-      float v = 0.0;
-      float a = 0.5;
-      for (int i = 0; i < 5; i++) {
-        v += a * noise(p);
-        p *= 2.0;
-        a *= 0.5;
-      }
-      return v;
-    }
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
 
-    void main() {
-      vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-      // center-correct aspect
-      vec2 center = uv - 0.5;
-      center.x *= u_resolution.x / u_resolution.y;
+float fbm(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * noise(p);
+    p *= 2.0;
+    a *= 0.5;
+  }
+  return v;
+}
 
-      // interactive ripple center: mouse (normalized)
-      vec2 mouse = u_mouse;
-      // if mouse not set (0,0) then fallback to center
-      if (mouse.x < 0.001 && mouse.y < 0.001) {
-        mouse = vec2(0.5, 0.5);
-      }
-      vec2 m = mouse - vec2(0.0, 1.0) + vec2(0.0); // we'll sample differently below
-      // convert mouse to shader uv-space like gl_FragCoord normalized
-      vec2 mouseUV = vec2(mouse.x, mouse.y);
+// smooth circular mask (for subtle center darkening)
+float circleMask(vec2 uv, vec2 center, float radius) {
+  float d = length(uv - center);
+  return smoothstep(radius, radius - 0.12, d);
+}
 
-      // scrolling influence (makes waves stronger when user scrolls)
-      float scrollInfluence = clamp(u_scroll * 0.8, 0.0, 1.0);
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+  vec2 aspectUV = uv;
+  aspectUV.x *= u_resolution.x / u_resolution.y; // preserve aspect
 
-      // time
-      float t = u_time * 0.8;
+  // mouse (fallback to center)
+  vec2 mouse = u_mouse;
+  if (mouse.x < 0.0001 && mouse.y < 0.0001) {
+    mouse = vec2(0.5, 0.5);
+  }
+  // convert mouse to uv-space (same space as uv)
+  vec2 mouseUV = vec2(mouse.x, 1.0 - mouse.y);
 
-      // base ripples from mouse position
-      vec2 diff = uv - mouseUV;
-      float dist = length(diff);
-      float ripple = sin(dist * 40.0 - t * 6.0) * exp(-dist * 6.0);
+  float t = u_time * 0.9;
+  float scrollInfluence = clamp(u_scroll * 0.6, 0.0, 1.5);
 
-      // add broader fluid motion with fbm
-      float v = fbm((uv * 3.0) + vec2(t * 0.12, t * -0.08));
-      float v2 = fbm((uv * 6.0) - vec2(t * 0.06, t * 0.04));
-      float field = mix(v, v2, 0.5);
+  // base gentle undulation using fbm
+  float baseFlow = fbm((aspectUV * 1.8) + vec2(t * 0.08, -t * 0.06));
 
-      // combine ripple + field + scroll
-      float flow = ripple * 0.9 + field * 0.35 + scrollInfluence * 0.25;
+  // local ripple from mouse movement
+  vec2 diff = aspectUV - mouseUV;
+  float dist = length(diff);
+  float ripple = sin(dist * 45.0 - t * 6.5) * exp(-dist * 6.5);
 
-      // color palette: coffee tones (lighter milk + dark espresso)
-      vec3 milk = vec3(0.94, 0.90, 0.84);     // background warm cream
-      vec3 lightCoffee = vec3(0.69, 0.49, 0.34);
-      vec3 darkCoffee = vec3(0.20, 0.10, 0.06);
+  // add a few moving layers for viscosity feel
+  float layer1 = fbm((aspectUV * 3.8) + vec2(t * 0.12, -t * 0.09));
+  float layer2 = fbm((aspectUV * 6.5) - vec2(t * 0.06, t * 0.03));
 
-      // compute smooth blend factor
-      float blend = smoothstep(-0.25, 0.6, flow);
+  // combine them
+  float flow = baseFlow * 0.45 + layer1 * 0.28 + layer2 * 0.15 + ripple * 0.9 + scrollInfluence * 0.25;
 
-      // use flow (with slight offset) to blend between milk and coffee
-      vec3 color = mix(milk, mix(lightCoffee, darkCoffee, clamp(flow*1.2,0.0,1.0)), blend);
+  // clamp & smooth
+  flow = smoothstep(-0.3, 1.0, flow);
 
-      // subtle surface sheen: add small specular-ish highlight using noise
-      float spec = 0.0;
-      spec += 0.02 * sin((uv.y + t*0.6) * 30.0) * (1.0 - dist);
-      color += spec;
+  // coffee color palette
+  vec3 cream = vec3(0.96, 0.93, 0.89);     // background warm cream
+  vec3 caramel = vec3(0.72, 0.50, 0.34);   // mid coffee
+  vec3 espresso = vec3(0.18, 0.09, 0.05);  // deep coffee
 
-      // gamma
-      color = pow(color, vec3(0.95));
+  // compute color by blending with flow
+  vec3 coffee = mix(caramel, espresso, clamp(flow * 1.2, 0.0, 1.0));
+  vec3 background = mix(cream, coffee, 0.18);
 
-      gl_FragColor = vec4(color, 1.0);
-    }
+  // subtle surface highlight (sheen) — guided by flow + a whisper of noise
+  float sheen = (sin((aspectUV.y + t * 0.6) * 25.0) * 0.5 + 0.5) * 0.06;
+  float micro = (fbm(aspectUV * 30.0 + t * 2.0) - 0.5) * 0.02;
+
+  // depth/edge darkening using a circular mask to give volume
+  float mask = circleMask(aspectUV, vec2(0.5 * (u_resolution.x/u_resolution.y), 0.5), 0.9);
+  coffee *= mix(1.0, 0.86, mask * 0.45);
+
+  // final color composition: base background blended with coffee surface and sheen
+  vec3 color = mix(background, coffee, flow * 1.05);
+  color += sheen * flow;
+  color += micro * flow;
+
+  // tiny rim highlight near ripple center
+  float rim = exp(-dist * 14.0) * 0.12;
+  color += vec3(0.04, 0.02, 0.01) * rim;
+
+  // slight gamma
+  color = pow(color, vec3(0.95));
+
+  gl_FragColor = vec4(color, 1.0);
+}
   </script>
 
 </head>

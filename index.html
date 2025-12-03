@@ -2,28 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Digital ColdBrew — Home</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Digital ColdBrew</title>
+  <meta name="description" content="Digital ColdBrew — Creative production & digital marketing" />
   <link rel="stylesheet" href="styles.css">
   <!-- GSAP + ScrollTrigger -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-  <!-- lottie (optional — used for cartoon hero if you choose an asset) -->
+  <!-- lottie-web -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"></script>
+  <!-- three.js (r152) for WebGL shader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
 </head>
 <body>
 
 <header class="site-header">
-  <div class="header-inner">
+  <div class="header-inner container">
     <a class="brand" href="index.html">
-      <img src="logo.png" class="brand-logo" alt="Logo" onerror="this.style.display='none'">
-      <div>Digital <strong style="color:var(--accent)">ColdBrew</strong></div>
+      <!-- Placeholder text logo; replace with your PNG/SVG file if you have -->
+      <svg width="44" height="44" viewBox="0 0 100 100" class="brand-logo" aria-hidden="true">
+        <rect width="100" height="100" rx="18" fill="#6b3f2a"/>
+        <text x="50" y="58" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="38" fill="#fff">DC</text>
+      </svg>
+      <div class="brand-text"><strong>Digital</strong> <span class="accent">ColdBrew</span></div>
     </a>
+
     <nav>
       <ul class="nav-list">
         <li><a href="index.html">Home</a></li>
         <li><a href="about.html">Who we are</a></li>
-        <li><a href="services.html">What we Brew</a></li>
+        <li><a href="services.html">Services</a></li>
         <li><a href="case-studies.html">Case studies</a></li>
         <li><a href="contact.html">Contact</a></li>
       </ul>
@@ -31,80 +39,143 @@
   </div>
 </header>
 
-<!-- HERO : choose one of two approaches:
-  A) Lottie-based cartoon hero: add <div id="lottie-hero" data-src="https://assets1.lottiefiles..."></div>
-  B) SVG pour approach: include SVG #glass-svg and a pour timeline in script.js (we provided earlier).
--->
-
+<!-- HERO (intro): WebGL canvas + Lottie drop + SVG glass -->
 <section id="intro" class="intro-section">
-  <div class="intro-bg" style="background-image:url('https://images.unsplash.com/photo-1533777324565-a040eb52fac2?auto=format&fit=crop&w=1800&q=80')"></div>
+  <!-- background image (dark moody desk) for fallback under WebGL -->
+  <div class="intro-bg" style="background-image:url('https://images.unsplash.com/photo-1505678261036-a3fcc5e884ee?auto=format&fit=crop&w=1800&q=90')"></div>
 
-  <!-- OPTION A: Lottie cartoon hero container (recommended) -->
-  <div id="lottie-hero" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:8"
-       data-src="https://assets6.lottiefiles.com/packages/lf20_XXXXX.json">
-    <!-- If you pick a Lottie from LottieFiles, put its JSON CDN link in data-src -->
-  </div>
+  <!-- WebGL canvas will be injected behind content into this container -->
+  <div id="webgl-hero" aria-hidden="true"></div>
 
-  <!-- fallback: pouring glass SVG (if you prefer) -->
-  <div class="pour-stage" aria-hidden="true">
-    <!-- include an SVG glass if you want the physical pour fallback — optional -->
-    <!-- I can include the same glass SVG I made earlier if you want to use it -->
+  <!-- Lottie container (we load your chosen Lottie and recolor it) -->
+  <div id="lottie-hero" aria-hidden="true"></div>
+
+  <!-- SVG glass overlay (center) - glass outline + masked liquid (we animate liquid position via JS) -->
+  <div id="pour-stage" class="pour-stage" aria-hidden="true">
+    <svg id="glass-svg" viewBox="0 0 600 1000" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="glassClip">
+          <path id="glassPath" d="M150 40 Q140 20 150 10 L450 10 Q460 20 450 40 L420 870 Q420 930 300 950 Q180 930 180 870 Z"/>
+        </clipPath>
+        <linearGradient id="coffeeGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#4b2e1f"/>
+          <stop offset="100%" stop-color="#2a170f"/>
+        </linearGradient>
+      </defs>
+
+      <!-- subtle glass outline -->
+      <path d="M150 40 Q140 20 150 10 L450 10 Q460 20 450 40 L420 870 Q420 930 300 950 Q180 930 180 870 Z"
+            fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="3"/>
+
+      <!-- masked liquid (starts off-screen and is animated upward) -->
+      <g clip-path="url(#glassClip)">
+        <rect id="liquid-rect" x="-50" y="950" width="700" height="1200" fill="url(#coffeeGrad)"></rect>
+        <g id="waves" transform="translate(0,900)">
+          <path id="waveA" d="M-20 40 C120 0,240 80,360 40 C480 0,600 80,720 40 L720 120 L-20 120 Z" fill="rgba(255,255,255,0.03)"/>
+          <path id="waveB" d="M-20 60 C120 20,240 100,360 60 C480 20,600 100,720 60 L720 140 L-20 140 Z" fill="rgba(0,0,0,0.06)"/>
+        </g>
+      </g>
+
+      <!-- pour stream (we overlay the Lottie drop but also have an SVG stream to blend) -->
+      <g id="pour-stream" opacity="0" transform="translate(420,-10)">
+        <path id="stream" d="M0 0 C6 60 14 130 10 200" stroke="#3e2618" stroke-width="16" stroke-linecap="round" fill="none" stroke-linejoin="round" />
+        <circle id="drop" cx="10" cy="200" r="8" fill="#2a170f" />
+      </g>
+
+      <g id="splashes" opacity="0"></g>
+    </svg>
   </div>
 
   <div class="intro-copy">
     <div class="container">
       <h1 class="brand-title">Digital ColdBrew</h1>
-      <p class="lead">Creative production & digital marketing for lifestyle brands.</p>
+      <p class="lead">Creative production for lifestyle brands — studio, shoots & performance marketing.</p>
     </div>
   </div>
 </section>
 
-<!-- brief "who we are" -->
+<!-- BRANDS section (renamed) -->
 <section class="section container fade-section">
-  <h3>Who we are</h3>
-  <p>We are a full-service creative digital agency — Digital, Design, Development and Production. We craft visuals and campaigns that scale.</p>
-</section>
+  <h3>Brands</h3>
+  <div class="clients" id="brand-logos">
+    <!-- Placeholder vector logos I created for you (scalable & 4K ready) -->
+    <div class="client-tile">
+      <!-- Viyona Jewels logo (vector placeholder) -->
+      <svg viewBox="0 0 200 80" class="client-logo" aria-hidden="true">
+        <rect width="200" height="80" rx="12" fill="#fff" opacity="0"/>
+        <g transform="translate(12,12)">
+          <circle cx="28" cy="28" r="24" fill="#4b2e1f"/>
+          <text x="56" y="36" font-family="Inter, sans-serif" font-weight="700" font-size="20" fill="#1f1b19">Viyona</text>
+        </g>
+      </svg>
+    </div>
 
-<!-- Expertise grid -->
-<section class="section container fade-section">
-  <h3>Our Expertise</h3>
-  <div class="expertise-grid">
-    <div class="card"><div class="card-body"><h4>Social Media Marketing</h4><p>Paid & organic social that converts.</p></div></div>
-    <div class="card"><div class="card-body"><h4>SEO</h4><p>Search strategies that bring long-term traffic.</p></div></div>
-    <div class="card"><div class="card-body"><h4>UX & Brand Design</h4><p>Brand systems and product UX.</p></div></div>
-    <div class="card"><div class="card-body"><h4>Production</h4><p>Studio shoots, short films, motion & photography.</p></div></div>
+    <div class="client-tile">
+      <!-- Anamayaa Studio -->
+      <svg viewBox="0 0 200 80" class="client-logo" aria-hidden="true">
+        <g transform="translate(12,12)">
+          <rect x="0" y="0" width="56" height="56" rx="8" fill="#6b3f2a"/>
+          <text x="72" y="36" font-family="Inter, sans-serif" font-weight="700" font-size="20" fill="#1f1b19">Anamayaa</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="client-tile">
+      <!-- Sparsh Design -->
+      <svg viewBox="0 0 200 80" class="client-logo" aria-hidden="true">
+        <g transform="translate(12,12)">
+          <path d="M0 0 H46 V46 H0 Z" fill="#341d12"/>
+          <text x="64" y="36" font-family="Inter, sans-serif" font-weight="700" font-size="20" fill="#1f1b19">Sparsh</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="client-tile">
+      <!-- The Fashion Steroid -->
+      <svg viewBox="0 0 240 80" class="client-logo" aria-hidden="true">
+        <g transform="translate(12,12)">
+          <ellipse cx="28" cy="28" rx="24" ry="20" fill="#5a341e"/>
+          <text x="64" y="36" font-family="Inter, sans-serif" font-weight="700" font-size="18" fill="#1f1b19">FashionSteroid</text>
+        </g>
+      </svg>
+    </div>
   </div>
 </section>
 
-<!-- Clients -->
-<section class="section container">
-  <h3>Top Brands</h3>
-  <div class="clients">
-    <!-- Replace with real client logos (use 44px height) -->
-    <img src="https://via.placeholder.com/140x44?text=ClientA" class="client-logo" alt="Client A">
-    <img src="https://via.placeholder.com/140x44?text=ClientB" class="client-logo" alt="Client B">
-    <img src="https://via.placeholder.com/140x44?text=ClientC" class="client-logo" alt="Client C">
-    <img src="https://via.placeholder.com/140x44?text=ClientD" class="client-logo" alt="Client D">
-  </div>
-</section>
-
-<!-- Portfolio cards -->
-<section class="section container cards-section fade-section">
-  <h3>Portfolio samples</h3>
+<!-- Portfolio / Case Studies -->
+<section class="container cards-section fade-section">
+  <h3>Case studies</h3>
   <div class="card-grid">
     <article class="card">
-      <div class="card-media"><img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=3840&q=80" alt=""></div>
-      <div class="card-body"><h4>Campaign A</h4><p>Production / set photography</p></div>
+      <div class="card-media">
+        <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2000&q=80" alt="Viyona campaign">
+      </div>
+      <div class="card-body"><h4>Viyona Jewels — Premium Jewelry Campaign</h4>
+        <p>Brand identity, product photography & social strategy for a heritage jewellery label.</p></div>
     </article>
 
     <article class="card">
-      <div class="card-media"><img src="https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&w=3840&q=80" alt=""></div>
-      <div class="card-body"><h4>Campaign B</h4><p>Lighting & styling</p></div>
+      <div class="card-media">
+        <img src="https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&w=2000&q=80" alt="Anamayaa campaign">
+      </div>
+      <div class="card-body"><h4>Anamayaa Studio — Lookbook & Launch</h4>
+        <p>Lookbook series, motion content & social-first short-form ads for product launch.</p></div>
     </article>
 
     <article class="card">
-      <div class="card-media"><img src="https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=3840&q=80" alt=""></div>
-      <div class="card-body"><h4>Campaign C</h4><p>Lookbook & editorial</p></div>
+      <div class="card-media">
+        <img src="https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=2000&q=80" alt="Sparsh campaign">
+      </div>
+      <div class="card-body"><h4>Sparsh Design — Brand Refresh</h4>
+        <p>Rebrand, packaging photography & performance creatives for increased conversion.</p></div>
+    </article>
+
+    <article class="card">
+      <div class="card-media">
+        <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=2000&q=80" alt="Fashion Steroid campaign">
+      </div>
+      <div class="card-body"><h4>The Fashion Steroid — Social Growth Suite</h4>
+        <p>Full-funnel social creative, UGC-style videos & conversion-optimised landing visuals.</p></div>
     </article>
   </div>
 </section>
@@ -114,29 +185,5 @@
 </footer>
 
 <script src="script.js" defer></script>
-<script>
-  // Load Lottie if data-src specified (basic helper)
-  (function loadHeroLottie(){
-    const el = document.getElementById('lottie-hero');
-    if(!el) return;
-    const src = el.getAttribute('data-src');
-    if(!src || !window.lottie) return;
-    const anim = lottie.loadAnimation({ container: el, renderer:'svg', loop:false, autoplay:false, path: src, rendererSettings:{preserveAspectRatio:'xMidYMid slice'} });
-    // scrub Lottie with ScrollTrigger (premium feel)
-    anim.addEventListener('DOMLoaded', ()=> {
-      const total = anim.getDuration(true) * 60 || anim.totalFrames || 120;
-      ScrollTrigger.create({
-        trigger: '#intro',
-        start: 'top top',
-        end: ()=>'+' + (window.innerHeight * 2),
-        scrub: 0.45,
-        onUpdate: self => {
-          const frame = Math.floor(self.progress * (anim.totalFrames || total));
-          try{ anim.goToAndStop(frame, true); }catch(e){}
-        }
-      });
-    });
-  })();
-</script>
 </body>
 </html>

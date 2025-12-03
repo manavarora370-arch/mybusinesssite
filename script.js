@@ -1,154 +1,109 @@
-// GSAP + ScrollTrigger implementations for animations 1..7 (shorter, subtler sweep)
+// GSAP + ScrollTrigger implementations for animations 1..7 (now with realistic SVG pour)
 gsap.registerPlugin(ScrollTrigger);
 
-// small helpers
+// helpers
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const year = $('#year'); if(year) year.textContent = new Date().getFullYear();
 
-// ---------- LOTTIE: coffee spill animation data (compact vector animation) ----------
-/*
- This is a compact Lottie "spill" animationData object. It simulates a dark coffee
- shape that grows/spreads vertically. The Lottie animation is scrubbed by ScrollTrigger.
-*/
-const coffeeSpillAnimationData = {
-  "v":"5.7.4",
-  "fr":60,
-  "ip":0,
-  "op":180,
-  "w":1920,
-  "h":1080,
-  "nm":"coffee-spill",
-  "ddd":0,
-  "assets":[],
-  "layers":[
-    {
-      "ddd":0,"ind":1,"ty":4,"nm":"spill-shape","sr":1,
-      "ks":{
-        "o":{"a":0,"k":100},
-        "r":{"a":0,"k":0},
-        "p":{"a":0,"k":[960,540,0]},
-        "a":{"a":0,"k":[0,0,0]},
-        // We'll animate scale 's' from low to high to simulate filling
-        "s":{"a":1,"k":[
-          {"i":{"x":[0.667,0.667,0.667],"y":[1,1,1]},"o":{"x":[0.333,0.333,0.333],"y":[0,0,0]},"t":0,"s":[10,0,100],"e":[10,60,100]},
-          {"i":{"x":[0.667],"y":[1]},"o":{"x":[0.333],"y":[0]},"t":120,"s":[10,60,100],"e":[10,100,100]},
-          {"t":179,"s":[10,100,100]}
-        ]}
-      },
-      "shapes":[
-        {
-          "ty":"gr","it":[
-            {"ty":"rc","d":1,"s":{"k":[1400,360]},"p":{"k":[0,60]},"r":{"k":90},"nm":"rect"},
-            {"ty":"fl","c":{"k":[0.286,0.180,0.114,1]},"o":{"k":100},"nm":"fill"},
-            {"ty":"tr","p":{"k":[0,0]},"a":{"k":[0,0]},"s":{"k":[100,100]},"r":{"k":0},"o":{"k":100},"sk":{"k":0},"sa":{"k":0}}
-          ],
-          "nm":"spill-group"
-        }
-      ],
-      "ao":0,"ip":0,"op":180,"st":0,"bm":0
+// Elements for pour animation
+const intro = $('#intro');
+const liquidRect = document.getElementById('liquid-rect');
+const wavesGroup = document.getElementById('waves');
+const pourStream = document.getElementById('pour-stream');
+const splashGroup = document.getElementById('splashes');
+const hint = document.querySelector('.hint');
+const skipBtn = document.getElementById('intro-skip');
+
+// Safety: if any SVG element missing, skip pour and reveal site
+if (!intro || !liquidRect || !pourStream) {
+  console.warn('Pour elements missing — skipping pour animation.');
+  // Reveal site immediately (keep other animations)
+  intro.style.display = 'none';
+} else {
+
+  // Build a timeline that matches the poured behavior. We'll control it with ScrollTrigger (scrubbed).
+  const pourTL = gsap.timeline({ paused: true });
+
+  // Initial: hide stream & splashes (they're already opacity 0 by CSS/SVG)
+  gsap.set(pourStream, { opacity: 0, scale: 1 });
+  gsap.set(splashGroup, { opacity: 0 });
+
+  // Step 1: stream appears and starts falling
+  pourTL.to(pourStream, { opacity: 1, duration: 0.35, ease: 'power1.out' }, 0.05);
+
+  // step 2: drop accelerated (we animate 'drop' via small translate)
+  pourTL.to('#drop', { y: 260, duration: 0.9, ease: 'power3.in' }, 0.05);
+
+  // step 3: splashes: create procedural small splashes
+  pourTL.call(() => {
+    // create a few circles for splash effect (inside splashGroup)
+    splashGroup.innerHTML = '';
+    for (let i=0;i<6;i++){
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      const cx = 380 + (Math.random()*60 - 30);
+      const cy = 260 + (Math.random()*20 - 10);
+      c.setAttribute('cx', cx);
+      c.setAttribute('cy', cy);
+      c.setAttribute('r', 2 + Math.random()*4);
+      c.setAttribute('fill', '#2f150e');
+      c.setAttribute('opacity', '0');
+      splashGroup.appendChild(c);
+      gsap.to(c, { opacity: 1, y: -20 - Math.random()*20, scale: 1.2, duration: 0.6 + Math.random()*0.4, ease: 'power2.out', clearProps: 'all' });
+      gsap.to(c, { opacity: 0, duration: 0.9, delay: 0.35 + Math.random()*0.2 });
     }
-  ],
-  "markers":[]
-};
+  }, null, 0.6);
 
-// ---------- 1) Intro pinned scrubbed timeline (shorter duration ~2x viewport) ----------
-(function introTimeline(){
-  const intro = $('#intro');
-  const bg = document.querySelector('.intro-bg');
-  const sweep = document.querySelector('.light-sweep');
-  const hint = document.querySelector('.hint');
-  const skipBtn = document.getElementById('intro-skip');
+  // step 4: liquid lift (fill) — move liquidRect upward to fill glass (from y ~950 to y ~120)
+  // We animate y attribute by tweening an object.
+  const startY = 950;
+  const endY = 120;
+  const obj = { y: startY };
+  pourTL.to(obj, {
+    y: endY,
+    duration: 1.2,
+    ease: 'power2.inOut',
+    onUpdate: () => {
+      try {
+        liquidRect.setAttribute('y', String(obj.y));
+        // move waves group a bit for realism
+        const waveOffset = 900 - (obj.y - endY) * 0.18;
+        wavesGroup.setAttribute('transform', `translate(0,${waveOffset})`);
+      } catch (e) {}
+    }
+  }, 0.9);
 
-  // timeline: scale bg lightly, subtle sweep, lighten mid, then fade
-  const tl = gsap.timeline({ paused: true });
+  // small wave motion and settle
+  pourTL.to('#waveA', { x: 18, duration: 1.1, ease: 'sine.inOut' }, 1.0);
+  pourTL.to('#waveB', { x: -12, duration: 1.1, ease: 'sine.inOut' }, 1.0);
 
-  tl.to(bg, { scale: 1.06, duration: 1.2, ease: "power2.inOut" }, 0);
-  tl.to(sweep, { xPercent: 220, opacity: 0.28, duration: 1.2, ease: "power2.inOut" }, 0.1);
-  tl.to('.brand-title', { y: -12, opacity: 1, duration: 0.7, ease: "power2.out" }, 0.05);
-  tl.to('.lead', { y: -8, opacity: 1, duration: 0.7, ease: "power2.out" }, 0.08);
+  // final: fade out stream and splashes and reveal site content
+  pourTL.to(pourStream, { opacity: 0, duration: 0.4, ease: 'power1.out' }, 2.05);
+  pourTL.to(splashGroup, { opacity: 0, duration: 0.6 }, 2.05);
 
-  // small settle
-  tl.to(bg, { scale: 1.02, duration: 0.9, ease: "power3.inOut" }, 1.0);
+  // On complete: hide intro and allow normal page
+  pourTL.call(() => {
+    gsap.to(intro, { opacity: 0, duration: 0.6, onComplete: () => { intro.style.display = 'none'; }});
+  }, null, 2.3);
 
-  // final: fade out intro quicker (shorter)
-  tl.to(intro, { opacity: 0, duration: 0.6, pointerEvents: 'none', onComplete() {
-    intro.style.display = 'none';
-  }}, 1.9);
-
-  // Create ScrollTrigger that pins the intro and scrubs the timeline (shorter end)
-  const st = ScrollTrigger.create({
-    animation: tl,
+  // Link pourTL to ScrollTrigger: scrubbed, pinned, length = 2 viewports
+  ScrollTrigger.create({
+    animation: pourTL,
     trigger: intro,
     start: 'top top',
-    end: () => `+=${window.innerHeight * 2}`, // shorter: ~2x viewport
-    scrub: 0.55,
+    end: () => `+=${window.innerHeight * 2}`, // your requested ~2.0 scroll length
+    scrub: 0.35,
     pin: true,
     anticipatePin: 1,
     onUpdate: self => {
-      if (self.progress > 0.01 && hint) gsap.to(hint, { opacity: 0, duration: 0.18 });
-      // Also update lottie timeline progress (if available)
-      if (window.__coffeeLottie && typeof window.__coffeeLottie.totalFrames === 'number') {
-        const lf = window.__coffeeLottie.totalFrames;
-        const frame = Math.floor(self.progress * (lf - 1));
-        try { window.__coffeeLottie.goToAndStop(frame, true); } catch(e){}
-      }
+      if (self.progress > 0.02 && hint) gsap.to(hint, { opacity: 0, duration: 0.12 });
     }
   });
 
-  // skip functionality
-  if (skipBtn) skipBtn.addEventListener('click', ()=> {
-    tl.progress(1);
-    // push lottie to end if present
-    if (window.__coffeeLottie) {
-      try{ window.__coffeeLottie.goToAndStop(window.__coffeeLottie.totalFrames-1, true); }catch(e){}
-    }
+  // Skip button: push timeline to end instantly
+  if (skipBtn) skipBtn.addEventListener('click', () => {
+    pourTL.progress(1);
   });
-
-  // initialize Lottie now (so it's ready to be scrubbed)
-  initCoffeeLottie();
-})();
-
-// ---------- LOTTIE: load and mount animation (with graceful fallback) ----------
-function initCoffeeLottie(){
-  const mount = document.getElementById('lottie-spill');
-  if(!mount) return;
-
-  // small helper to try/catch lottie create
-  try {
-    const anim = lottie.loadAnimation({
-      container: mount,
-      renderer: 'svg',
-      loop: false,
-      autoplay: false,
-      animationData: coffeeSpillAnimationData,
-      rendererSettings: { preserveAspectRatio: 'xMidYMid slice' }
-    });
-
-    // store reference globally so other code can update frames
-    window.__coffeeLottie = anim;
-
-    // set initial frame (very small)
-    anim.goToAndStop(0, true);
-
-    // Optional: subtle entrance fade for the lottie layer
-    gsap.fromTo('#lottie-spill', { opacity: 0 }, { opacity: 0.98, duration: 0.9, ease: 'power2.out' });
-
-    // In case animation loaded but totalFrames isn't ready instantly, add a short poll
-    if (!anim.totalFrames) {
-      const poll = setInterval(()=> {
-        if (anim.totalFrames) {
-          clearInterval(poll);
-          // nothing more; scroll trigger will update frames in onUpdate
-        }
-      }, 60);
-    }
-
-  } catch (e) {
-    console.warn('Lottie init failed — fallback: skipping spill animation', e);
-    // ensure #lottie-spill hidden so it doesn't show a raw element
-    try { document.getElementById('lottie-spill').style.display = 'none'; } catch(e2){}
-  }
 }
 
 // ---------- 2) Fade-in sections on scroll (global) ----------
@@ -263,16 +218,5 @@ function initCoffeeLottie(){
 })();
 
 // refresh on load/resize
-window.addEventListener('load', ()=> {
-  ScrollTrigger.refresh();
-  // ensure lottie is synced if page loaded mid-scroll
-  if (window.__coffeeLottie && typeof window.__coffeeLottie.totalFrames === 'number') {
-    const st = ScrollTrigger.getAll().find(s=> s.trigger && s.trigger.id === 'intro');
-    if (st) {
-      const lf = window.__coffeeLottie.totalFrames;
-      const frame = Math.floor(st.progress * (lf - 1));
-      try { window.__coffeeLottie.goToAndStop(frame, true); } catch(e){}
-    }
-  }
-});
+window.addEventListener('load', ()=> ScrollTrigger.refresh());
 window.addEventListener('resize', ()=> ScrollTrigger.refresh());

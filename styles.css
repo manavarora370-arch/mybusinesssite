@@ -1,60 +1,88 @@
-:root{
-  --bg:#efe6d0; /* light coffee */
-  --text:#1f1b19;
-  --muted:#6d5d53;
-  --accent:#6b3f2a;
-  --maxw:1200px;
-  --glass-w:64vmin;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
-.container{max-width:var(--maxw);margin:0 auto;padding:1.25rem}
-a{color:inherit;text-decoration:none}
 
-/* header */
-.site-header{position:sticky;top:0;z-index:120;background:linear-gradient(180deg,rgba(255,255,255,0.75),rgba(255,255,255,0.35));backdrop-filter:blur(6px)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:1rem}
-.brand{display:flex;align-items:center;gap:.6rem}
-.brand-logo{width:44px;height:44px;border-radius:8px}
-.brand-text{font-weight:700}
-.accent{color:var(--accent)}
-.nav-list{display:flex;gap:.6rem;list-style:none;margin:0;padding:0}
-.nav-list a{padding:.5rem .7rem;border-radius:8px}
+body, html {
+  height: 100%;
+  overflow-x: hidden;
+  background: #0f0d0a;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+}
 
-/* hero / intro */
-.intro-section{position:relative;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.intro-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:contrast(.95) saturate(.98);z-index:1}
-#webgl-hero{position:absolute;inset:0;z-index:2;pointer-events:none}
-#lottie-hero{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;pointer-events:none}
-.pour-stage{position:relative;z-index:6;display:flex;align-items:center;justify-content:center;pointer-events:none;width:100%}
-#glass-svg{width:var(--glass-w);height:calc(var(--glass-w) * 1.4);display:block}
+/* Fullscreen WebGL Canvas */
+#coffee-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100vw;
+  height: 100vh;
+}
 
-/* intro copy */
-.intro-copy{position:relative;z-index:20;text-align:center;color:#fff;padding:2rem}
-.brand-title{font-size:clamp(2rem,6vw,4rem);margin:0;text-shadow:0 8px 28px rgba(0,0,0,0.45)}
-.lead{color:rgba(255,255,255,0.9);margin-top:.6rem}
+/* Navbar */
+.nav {
+  width: 100%;
+  padding: 25px 60px;
+  display: flex;
+  justify-content: space-between;
+  position: fixed;
+  top: 0;
+  z-index: 10;
+  background: transparent;
+}
 
-/* brands */
-.section{padding:3rem 0}
-.clients{display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;justify-content:center;padding:1rem 0}
-.client-logo{height:64px;width:auto;display:block}
-.client-tile{display:flex;align-items:center;justify-content:center;padding:.6rem;background:rgba(255,255,255,0.92);border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.06)}
+.nav a {
+  margin-left: 40px;
+  text-decoration: none;
+  color: #f7f3e9;
+  font-weight: 500;
+  font-size: 16px;
+}
 
-/* card grid */
-.cards-section{padding:2.5rem 0}
-.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
-.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(20,20,20,0.06)}
-.card-media img{width:100%;height:220px;object-fit:cover;display:block}
-.card-body{padding:0.9rem}
+.brand {
+  font-size: 26px;
+  font-weight: 700;
+}
 
-/* footer */
-.site-footer{padding:2rem 0;text-align:center;color:var(--muted)}
+.brand span {
+  color: #c3915e;
+}
 
-/* responsiveness */
-@media (max-width:900px){
-  .brand-title{font-size:clamp(1.6rem,7vw,2.6rem)}
-  #glass-svg{width:86vmin;height:86vmin}
-  .card-media img{height:160px}
-  .client-logo{height:48px}
+/* HERO */
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 60px;
+  position: relative;
+  z-index: 5;
+}
+
+.hero h1 {
+  font-size: 76px;
+  font-weight: 800;
+}
+
+.hero p {
+  margin-top: 15px;
+  font-size: 22px;
+  max-width: 580px;
+  line-height: 1.4;
+}
+
+/* CONTENT SECTIONS */
+.content {
+  min-height: 80vh;
+  padding: 140px 60px;
+  position: relative;
+  z-index: 5;
+}
+
+h2 {
+  font-size: 42px;
+  margin-bottom: 20px;
 }

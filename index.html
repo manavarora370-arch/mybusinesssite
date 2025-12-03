@@ -9,6 +9,8 @@
   <!-- GSAP + ScrollTrigger -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <!-- lottie-web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"></script>
 </head>
 <body>
 
@@ -20,6 +22,9 @@
       <div class="vignette"></div>
       <div class="light-sweep" aria-hidden="true"></div>
     </div>
+
+    <!-- Lottie spill container (full-screen overlay inside intro) -->
+    <div id="lottie-spill" aria-hidden="true"></div>
 
     <div class="intro-copy">
       <div class="container">
@@ -34,11 +39,10 @@
     </div>
   </section>
 
-  <!-- ===== Hero with Parallax (changed to a better "coding/desk" creative) ===== -->
+  <!-- ===== Hero with Parallax (Moody swapped) ===== -->
   <section id="hero" class="hero-section">
     <div class="hero-inner container">
       <div class="hero-media" aria-hidden="true">
-        <!-- Updated to a more relevant, aesthetic coding/desk photo -->
         <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1800&q=90" alt="Creative desk / production planning">
       </div>
       <div class="hero-content">
@@ -49,13 +53,12 @@
     </div>
   </section>
 
-  <!-- ===== Section Transitions (fade + move) ===== -->
+  <!-- ===== Sections & content (unchanged structure) ===== -->
   <section class="section container fade-section">
     <h3>What we do</h3>
     <p>Strategic marketing + production. We craft visuals that convert across channels and platforms.</p>
   </section>
 
-  <!-- ===== Sticky / pinned product block (text panels on scroll) ===== -->
   <section class="sticky-wrap">
     <div class="sticky-inner container">
       <div class="sticky-media">
@@ -69,13 +72,11 @@
     </div>
   </section>
 
-  <!-- ===== Grid Cards (stagger + hover) - Portfolio samples (4K, Pinterest-ready) ===== -->
   <section class="container cards-section fade-section">
     <h3>Portfolio samples</h3>
     <div class="card-grid">
       <article class="card">
         <div class="card-media">
-          <!-- Campaign A: Production House — cinematic set -->
           <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=3840&q=80" alt="Campaign A - Production set (4K)">
         </div>
         <div class="card-body"><h4>Campaign A</h4><p>Production house / set photography.</p></div>
@@ -83,7 +84,6 @@
 
       <article class="card">
         <div class="card-media">
-          <!-- Campaign B: Studio Lighting & Styling -->
           <img src="https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&w=3840&q=80" alt="Campaign B - Studio lighting (4K)">
         </div>
         <div class="card-body"><h4>Campaign B</h4><p>Studio lighting & styling shots.</p></div>
@@ -91,7 +91,6 @@
 
       <article class="card">
         <div class="card-media">
-          <!-- Campaign C: Lifestyle lookbook -->
           <img src="https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=3840&q=80" alt="Campaign C - Lifestyle lookbook (4K)">
         </div>
         <div class="card-body"><h4>Campaign C</h4><p>Lookbook & editorial imagery.</p></div>
@@ -99,7 +98,6 @@
 
       <article class="card">
         <div class="card-media">
-          <!-- Campaign D: Social-first storyboard frames -->
           <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=3840&q=80" alt="Campaign D - Social content (4K)">
         </div>
         <div class="card-body"><h4>Campaign D</h4><p>Social-first short-form content packages.</p></div>
@@ -107,12 +105,10 @@
     </div>
   </section>
 
-  <!-- ===== Footer ===== -->
   <footer class="site-footer container">
     <p>&copy; <span id="year"></span> Digital ColdBrew</p>
   </footer>
 
-  <!-- Header / Nav (kept consistent & simple) -->
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html">

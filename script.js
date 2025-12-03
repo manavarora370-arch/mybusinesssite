@@ -6,6 +6,52 @@ const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const year = $('#year'); if(year) year.textContent = new Date().getFullYear();
 
+// ---------- LOTTIE: coffee spill animation data (compact vector animation) ----------
+/*
+ This is a compact Lottie "spill" animationData object. It simulates a dark coffee
+ shape that grows/spreads vertically. The Lottie animation is scrubbed by ScrollTrigger.
+*/
+const coffeeSpillAnimationData = {
+  "v":"5.7.4",
+  "fr":60,
+  "ip":0,
+  "op":180,
+  "w":1920,
+  "h":1080,
+  "nm":"coffee-spill",
+  "ddd":0,
+  "assets":[],
+  "layers":[
+    {
+      "ddd":0,"ind":1,"ty":4,"nm":"spill-shape","sr":1,
+      "ks":{
+        "o":{"a":0,"k":100},
+        "r":{"a":0,"k":0},
+        "p":{"a":0,"k":[960,540,0]},
+        "a":{"a":0,"k":[0,0,0]},
+        // We'll animate scale 's' from low to high to simulate filling
+        "s":{"a":1,"k":[
+          {"i":{"x":[0.667,0.667,0.667],"y":[1,1,1]},"o":{"x":[0.333,0.333,0.333],"y":[0,0,0]},"t":0,"s":[10,0,100],"e":[10,60,100]},
+          {"i":{"x":[0.667],"y":[1]},"o":{"x":[0.333],"y":[0]},"t":120,"s":[10,60,100],"e":[10,100,100]},
+          {"t":179,"s":[10,100,100]}
+        ]}
+      },
+      "shapes":[
+        {
+          "ty":"gr","it":[
+            {"ty":"rc","d":1,"s":{"k":[1400,360]},"p":{"k":[0,60]},"r":{"k":90},"nm":"rect"},
+            {"ty":"fl","c":{"k":[0.286,0.180,0.114,1]},"o":{"k":100},"nm":"fill"},
+            {"ty":"tr","p":{"k":[0,0]},"a":{"k":[0,0]},"s":{"k":[100,100]},"r":{"k":0},"o":{"k":100},"sk":{"k":0},"sa":{"k":0}}
+          ],
+          "nm":"spill-group"
+        }
+      ],
+      "ao":0,"ip":0,"op":180,"st":0,"bm":0
+    }
+  ],
+  "markers":[]
+};
+
 // ---------- 1) Intro pinned scrubbed timeline (shorter duration ~2x viewport) ----------
 (function introTimeline(){
   const intro = $('#intro');
@@ -31,7 +77,7 @@ const year = $('#year'); if(year) year.textContent = new Date().getFullYear();
   }}, 1.9);
 
   // Create ScrollTrigger that pins the intro and scrubs the timeline (shorter end)
-  ScrollTrigger.create({
+  const st = ScrollTrigger.create({
     animation: tl,
     trigger: intro,
     start: 'top top',
@@ -41,12 +87,69 @@ const year = $('#year'); if(year) year.textContent = new Date().getFullYear();
     anticipatePin: 1,
     onUpdate: self => {
       if (self.progress > 0.01 && hint) gsap.to(hint, { opacity: 0, duration: 0.18 });
+      // Also update lottie timeline progress (if available)
+      if (window.__coffeeLottie && typeof window.__coffeeLottie.totalFrames === 'number') {
+        const lf = window.__coffeeLottie.totalFrames;
+        const frame = Math.floor(self.progress * (lf - 1));
+        try { window.__coffeeLottie.goToAndStop(frame, true); } catch(e){}
+      }
     }
   });
 
   // skip functionality
-  if (skipBtn) skipBtn.addEventListener('click', ()=> tl.progress(1));
+  if (skipBtn) skipBtn.addEventListener('click', ()=> {
+    tl.progress(1);
+    // push lottie to end if present
+    if (window.__coffeeLottie) {
+      try{ window.__coffeeLottie.goToAndStop(window.__coffeeLottie.totalFrames-1, true); }catch(e){}
+    }
+  });
+
+  // initialize Lottie now (so it's ready to be scrubbed)
+  initCoffeeLottie();
 })();
+
+// ---------- LOTTIE: load and mount animation (with graceful fallback) ----------
+function initCoffeeLottie(){
+  const mount = document.getElementById('lottie-spill');
+  if(!mount) return;
+
+  // small helper to try/catch lottie create
+  try {
+    const anim = lottie.loadAnimation({
+      container: mount,
+      renderer: 'svg',
+      loop: false,
+      autoplay: false,
+      animationData: coffeeSpillAnimationData,
+      rendererSettings: { preserveAspectRatio: 'xMidYMid slice' }
+    });
+
+    // store reference globally so other code can update frames
+    window.__coffeeLottie = anim;
+
+    // set initial frame (very small)
+    anim.goToAndStop(0, true);
+
+    // Optional: subtle entrance fade for the lottie layer
+    gsap.fromTo('#lottie-spill', { opacity: 0 }, { opacity: 0.98, duration: 0.9, ease: 'power2.out' });
+
+    // In case animation loaded but totalFrames isn't ready instantly, add a short poll
+    if (!anim.totalFrames) {
+      const poll = setInterval(()=> {
+        if (anim.totalFrames) {
+          clearInterval(poll);
+          // nothing more; scroll trigger will update frames in onUpdate
+        }
+      }, 60);
+    }
+
+  } catch (e) {
+    console.warn('Lottie init failed — fallback: skipping spill animation', e);
+    // ensure #lottie-spill hidden so it doesn't show a raw element
+    try { document.getElementById('lottie-spill').style.display = 'none'; } catch(e2){}
+  }
+}
 
 // ---------- 2) Fade-in sections on scroll (global) ----------
 (function fadeSections(){
@@ -160,5 +263,16 @@ const year = $('#year'); if(year) year.textContent = new Date().getFullYear();
 })();
 
 // refresh on load/resize
-window.addEventListener('load', ()=> ScrollTrigger.refresh());
+window.addEventListener('load', ()=> {
+  ScrollTrigger.refresh();
+  // ensure lottie is synced if page loaded mid-scroll
+  if (window.__coffeeLottie && typeof window.__coffeeLottie.totalFrames === 'number') {
+    const st = ScrollTrigger.getAll().find(s=> s.trigger && s.trigger.id === 'intro');
+    if (st) {
+      const lf = window.__coffeeLottie.totalFrames;
+      const frame = Math.floor(st.progress * (lf - 1));
+      try { window.__coffeeLottie.goToAndStop(frame, true); } catch(e){}
+    }
+  }
+});
 window.addEventListener('resize', ()=> ScrollTrigger.refresh());

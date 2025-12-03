@@ -1,112 +1,149 @@
-// GSAP + ScrollTrigger approach with gesture accumulation and skip
+// GSAP + ScrollTrigger animations implementing 1..7
 gsap.registerPlugin(ScrollTrigger);
 
-// elements
-const overlay = document.getElementById('intro-overlay');
-const liquidLayer = document.getElementById('liquid-layer');
-const pourStream = document.getElementById('pour-stream');
-const drops = document.getElementById('drops');
-const site = document.getElementById('site');
-const skipBtn = document.getElementById('skip-btn');
-const hint = document.getElementById('hint');
-const yearEl = document.getElementById('year');
-if(yearEl) yearEl.textContent = new Date().getFullYear();
+// helper
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const year = $('#year'); if(year) year.textContent = new Date().getFullYear();
 
-// config
-const SCROLL_FACTOR = 3.0; // how many viewport-heights to require
-let accumulated = 0;
-let maxNeeded = window.innerHeight * SCROLL_FACTOR;
-let finished = false;
+// 1) Intro pinned scrubbed timeline (fullscreen)
+(function introTimeline(){
+  const tl = gsap.timeline({ paused:true });
+  // subtle scale/tilt + "liquid rise" substitute by scaling the rect inside .glass-visual
+  tl.to('.glass-visual svg', { scale: 1.05, duration: 1.2, transformOrigin: "50% 50%", ease: "power2.inOut" }, 0);
+  tl.to('.glass-visual svg rect', { attr:{height:1000}, duration: 2.2, ease: "power3.inOut" }, 0.2);
+  tl.to('.intro-copy h1, .intro-copy .lead', { y:-18, opacity:1, stagger:0.12, duration:1, ease:"power2.out" }, 0);
 
-// easing helper
-const clamp = (v,a,b)=> Math.max(a, Math.min(b, v));
+  // final: shrink overlay and reveal site
+  tl.to('#intro', { opacity: 0, duration: 0.9, pointerEvents: 'none', onComplete() {
+    document.getElementById('intro').style.display='none';
+    document.getElementById('site').classList.remove('hidden');
+    document.getElementById('site').classList.add('visible');
+  }}, 2.5);
 
-// animate liquid by adjusting group translateY with GSAP for smoothness
-function setProgress(progress){
-  // progress 0..1 -> translateY 820 -> 0 (matches SVG initial)
-  const start = 820, end = 0;
-  const y = start - (start-end) * progress;
-  gsap.to(liquidLayer, { duration: 0.45, attr: { transform: `translate(0,${y})` }, ease: "power3.out" });
-  // wave subtle x offset
-  gsap.to("#wave1", { duration: 0.7, x: -40 + progress*40, ease: "sine.inOut" });
-  gsap.to("#wave2", { duration: 0.7, x: -20 + progress*20, ease: "sine.inOut" });
-  gsap.to("#wave3", { duration: 0.7, x: -60 + progress*60, ease: "sine.inOut" });
+  ScrollTrigger.create({
+    animation: tl,
+    trigger: '#intro',
+    start: 'top top',
+    end: () => `+=${window.innerHeight * 3}`, // ~3 screen heights
+    scrub: 0.6,
+    pin: true,
+    anticipatePin: 1
+  });
 
-  // pour/drops opacity
-  const showPour = progress > 0.02 && progress < 0.96;
-  gsap.to(pourStream, { duration:0.35, opacity: showPour ? 1 : 0, ease:"power1.out" });
-  gsap.to(drops, { duration:0.25, opacity: (progress>0.12 && progress<0.92) ? 1 : 0 });
+  // skip
+  const skip = document.getElementById('intro-skip');
+  if(skip) skip.addEventListener('click', ()=> tl.progress(1));
+})();
 
-  // rotate overlay a bit
-  const rot = (progress - 0.5) * 12;
-  gsap.to("#glass-scene", { duration: 0.6, rotation: rot, transformOrigin: "center center", ease: "power1.out" });
-
-  // if full
-  if(progress >= 1 && !finished){
-    finished = true;
-    // fade overlay and reveal site
-    gsap.to(overlay, { duration: 0.9, opacity: 0, pointerEvents: "none", onComplete: ()=> {
-      overlay.style.display = "none";
-      site.classList.remove('hidden');
-      site.classList.add('visible');
-    }});
-  }
-}
-
-// input handling (wheel, touch, pointer)
-function addAccum(delta){
-  if(finished) return;
-  accumulated = clamp(accumulated + Math.abs(delta), 0, maxNeeded);
-  const p = clamp(accumulated / maxNeeded, 0, 1);
-  setProgress(p);
-  if(hint) hint.style.opacity = '0';
-}
-
-window.addEventListener('wheel', e => {
-  addAccum(e.deltaY);
-}, { passive: true });
-
-// touch
-let lastTouchY = null;
-window.addEventListener('touchstart', e => {
-  lastTouchY = e.touches[0].clientY;
-}, { passive: true });
-window.addEventListener('touchmove', e => {
-  if(!lastTouchY) return;
-  const y = e.touches[0].clientY;
-  const dy = lastTouchY - y;
-  // only upward swipes fill
-  if(dy > 0) addAccum(dy * 0.7);
-  lastTouchY = y;
-}, { passive: true });
-window.addEventListener('touchend', () => { lastTouchY = null; });
-
-// pointer drag
-let isDown = false, lastY = null;
-window.addEventListener('pointerdown', e => { isDown = true; lastY = e.clientY; }, { passive: true });
-window.addEventListener('pointermove', e => {
-  if(!isDown) return;
-  const dy = lastY - e.clientY;
-  if(dy>0) addAccum(dy*0.6);
-  lastY = e.clientY;
-}, { passive: true });
-window.addEventListener('pointerup', ()=> { isDown=false; lastY=null; }, { passive:true });
-
-// skip button
-skipBtn.addEventListener('click', ()=> {
-  accumulated = maxNeeded;
-  setProgress(1);
+// 2) Fade-in sections on scroll (global)
+$$('.fade-section, .cards-section, .hero-section').forEach(section => {
+  gsap.from(section, {
+    scrollTrigger: {
+      trigger: section,
+      start: 'top 80%',
+      end: 'bottom 40%',
+      toggleActions: 'play none none none'
+    },
+    y: 26,
+    opacity: 0,
+    duration: 0.9,
+    ease: 'power2.out'
+  });
 });
 
-// resize recalc
-window.addEventListener('resize', ()=> {
-  maxNeeded = window.innerHeight * SCROLL_FACTOR;
-});
+// 3) Hero parallax: image moves slower than text
+(function heroParallax(){
+  const heroImg = document.querySelector('.hero-media img');
+  if(!heroImg) return;
+  gsap.to(heroImg, {
+    y: -120,
+    ease: 'none',
+    scrollTrigger: {
+      trigger: '.hero-section',
+      start: 'top bottom',
+      end: 'bottom top',
+      scrub: 0.6
+    }
+  });
+})();
 
-// keyboard skip: space or s
-window.addEventListener('keydown', (e)=> {
-  if(e.key === ' ' || e.key.toLowerCase() === 's') {
-    accumulated = maxNeeded;
-    setProgress(1);
-  }
-});
+// 4) Sticky/pinned product block (text panels on scroll)
+(function stickyPanels(){
+  const sticky = document.querySelector('.sticky-wrap');
+  if(!sticky) return;
+  const panels = gsap.utils.toArray('.sticky-panel');
+  panels.forEach((panel,i) => panel.style.opacity = 0);
+
+  const tl = gsap.timeline({
+    scrollTrigger: {
+      trigger: '.sticky-wrap',
+      start: 'top top',
+      end: () => `+=${window.innerHeight * panels.length}`,
+      scrub: 0.6,
+      pin: true,
+      anticipatePin: 1
+    }
+  });
+  // For each panel: fade it in, then move to next
+  panels.forEach((p, i) => {
+    tl.to(p, { opacity:1, y:0, duration:0.6, ease:'power2.out' });
+    tl.to(p, { opacity:0, duration:0.45, delay:0.6 });
+  });
+})();
+
+// 5) Staggered card reveal on scroll
+(function cardReveal(){
+  const cards = gsap.utils.toArray('.card');
+  gsap.set(cards, { y: 20, opacity: 0 });
+  gsap.to(cards, {
+    y:0, opacity:1, duration:0.9, ease:'power2.out', stagger:0.18,
+    scrollTrigger: {
+      trigger: '.card-grid',
+      start: 'top 80%',
+      end: 'bottom 40%',
+      toggleActions: 'play none none none'
+    }
+  });
+})();
+
+// 6) Hover animations for cards are in CSS (scale & image zoom). For pointer tilt effect (optional):
+(function pointerTilt(){
+  const cards = $$('.card');
+  cards.forEach(card => {
+    const img = card.querySelector('img');
+    card.addEventListener('mousemove', (e) => {
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      const rx = (py - 0.5) * 6;
+      const ry = (px - 0.5) * -6;
+      card.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(0)`;
+      if(img) img.style.transform = 'scale(1.06)';
+    });
+    card.addEventListener('mouseleave', ()=> {
+      card.style.transform = '';
+      if(img) img.style.transform = '';
+    });
+  });
+})();
+
+// 7) Scroll-linked 3D tilt for hero & sections (subtle)
+(function subtleTilt(){
+  const container = document.querySelector('.hero-section');
+  if(!container) return;
+  ScrollTrigger.create({
+    trigger: container,
+    start: 'top bottom',
+    end: 'bottom top',
+    scrub: true,
+    onUpdate: self => {
+      const r = (self.progress - 0.5) * 6; // -3..3deg
+      container.style.transform = `rotateX(${r/3}deg) rotateZ(${r}deg)`;
+    }
+  });
+})();
+
+// refresh ScrollTrigger on load/resize
+window.addEventListener('load', ()=> ScrollTrigger.refresh());
+window.addEventListener('resize', ()=> ScrollTrigger.refresh());

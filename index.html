@@ -5,49 +5,35 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>DigitalColdBrew — Digital Marketing & Creative Studio</title>
 
-  <!-- SEO: keywords + description -->
-  <!-- Put your primary targeted keywords here (replace examples) -->
   <meta name="description" content="DigitalColdBrew — Creative digital marketing agency. SEO, UI/UX, 3D web animations, performance-driven campaigns." />
-  <meta name="keywords" content="digital marketing agency, web animations, creative studio, SEO, social media marketing, brand design, DigitalColdBrew, website animations" />
+  <meta name="keywords" content="digital marketing agency, web animations, creative studio, SEO, social media marketing, brand design, DigitalColdBrew" />
 
-  <!-- OpenGraph / Social -->
-  <meta property="og:title" content="DigitalColdBrew — Creative Digital Marketing" />
-  <meta property="og:description" content="Creative campaigns, conversion focused design, and immersive website animations." />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="placeholder-og-image.jpg" />
-
-  <!-- JSON-LD structured data (localBusiness example). Edit as needed -->
+  <!-- JSON-LD -->
   <script type="application/ld+json">
   {
     "@context":"https://schema.org",
     "@type":"ProfessionalService",
     "name":"DigitalColdBrew",
     "url":"https://yourdomain.example",
-    "logo":"https://yourdomain.example/logo.png",
-    "description":"Creative digital marketing studio offering web animation, SEO, branding and performance marketing.",
-    "sameAs":["https://www.facebook.com/your","https://www.instagram.com/your"]
+    "description":"Creative digital marketing studio offering web animation, SEO, branding and performance marketing."
   }
   </script>
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css">
 
-  <!-- Libraries from CDN (no build required) -->
+  <!-- Libraries -->
   <script src="https://unpkg.com/three@0.164.0/build/three.min.js"></script>
   <script src="https://unpkg.com/three@0.164.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://unpkg.com/gsap@3.12.0/dist/gsap.min.js"></script>
   <script src="https://unpkg.com/gsap@3.12.0/dist/ScrollTrigger.min.js"></script>
 
-  <!-- Small helpful fonts - change to your brand font -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700;900&display=swap" rel="stylesheet">
-
-  <!-- Inline CSS fallback for very small screens -->
-  <style>html,body{height:100%;}</style>
 </head>
 <body>
   <div id="canvas-wrap">
-    <!-- three.js will attach here -->
     <canvas id="hero-canvas"></canvas>
+
     <div class="hero-overlay">
       <header class="site-header">
         <div class="logo">DigitalColdBrew</div>
@@ -61,7 +47,7 @@
       <section class="hero">
         <div class="hero-left">
           <h1><span class="accent">We craft</span> digital experiences that convert</h1>
-          <p class="lead">Design-led websites, performance marketing, and immersive 3D animations for brands who want to stand out.</p>
+          <p class="lead">Design-first websites, performance marketing, and immersive web animations for brands who want to stand out.</p>
           <div class="hero-actions">
             <a class="btn" href="#work">Our Work</a>
             <a class="btn outline" href="#contact">Let's Talk</a>
@@ -69,7 +55,6 @@
         </div>
 
         <div class="hero-right">
-          <!-- Small placeholder card that will float on top of canvas -->
           <div class="floating-card" id="floating-card">
             <div class="card-media">DCB</div>
             <div class="card-text">
@@ -82,7 +67,6 @@
     </div>
   </div>
 
-  <!-- SIMPLE CONTENT TO SHOW SCROLL TRIGGERS -->
   <main>
     <section id="services" class="section">
       <h2>Services</h2>

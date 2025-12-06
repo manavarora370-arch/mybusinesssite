@@ -1,29 +1,19 @@
-precision highp float;
+// coffee-shader.frag
+#ifdef GL_ES
+precision mediump float;
+#endif
 
-uniform float u_time;
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-uniform float u_scroll;
+varying vec2 vUv;
+uniform float uTime;
 
-float ripple(vec2 uv, vec2 center, float speed, float scale) {
-  float d = distance(uv, center);
-  return sin(d * scale - u_time * speed) / (d * 12.0 + 0.8);
-}
-
-void main() {
-  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-  
-  float base = 0.1;
-
-  float r1 = ripple(uv, u_mouse, 3.5, 18.0);
-  float r2 = ripple(uv, vec2(0.5), 2.2, 9.0);
-  float r3 = ripple(uv, vec2(0.3, 0.7), 1.8, 14.0);
-
-  float effect = r1 + r2 + r3 + u_scroll * 0.15;
-
-  vec3 coffee = vec3(0.24, 0.15, 0.07);
-
-  vec3 color = coffee + effect * 0.25;
-
+void main(){
+  vec3 col1 = vec3(0.02, 0.09, 0.12);
+  vec3 col2 = vec3(0.05, 0.35, 0.28);
+  vec3 col3 = vec3(0.9, 0.4, 0.45);
+  float g = smoothstep(0.0, 1.0, vUv.y + 0.1 * sin(uTime * 0.2 + vUv.x * 6.0));
+  vec3 color = mix(col1, col2, g);
+  color = mix(color, col3, pow(vUv.x, 2.0) * 0.12);
+  float vign = smoothstep(0.7, 0.15, distance(vUv, vec2(0.5)));
+  color *= (1.0 - 0.5 * vign);
   gl_FragColor = vec4(color, 1.0);
 }

@@ -1,18 +1,82 @@
-// script.js - safe loader + shader + fallback + lottie integration
-(async function(){
+// script.js - robust loader: loads three.js, helpers, gsap, lottie if missing then runs scene
+(async function() {
+  // Utility: load external script and wait until loaded
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      // if already loaded (by exact src), resolve
+      const existing = Array.from(document.scripts).find(s => s.src && s.src.indexOf(src) !== -1);
+      if (existing) {
+        existing.addEventListener('load', () => resolve());
+        if (existing.readyState === 'complete' || existing.readyState === 'loaded') resolve();
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = false; // preserve some ordering
+      s.onload = () => resolve();
+      s.onerror = (e) => reject(new Error('Failed to load ' + src));
+      document.head.appendChild(s);
+    });
+  }
 
-  // helper: fetch text or null
-  async function fetchText(path){
+  // CDN versions used (stable)
+  const CDN = {
+    three: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js',
+    gltf: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/examples/js/loaders/GLTFLoader.js',
+    orbit: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/examples/js/controls/OrbitControls.js',
+    gsap: 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js',
+    scrollTrigger: 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js',
+    lottie: 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js'
+  };
+
+  // Ensure required libraries exist. If already present, skip load.
+  try {
+    if (typeof THREE === 'undefined') {
+      await loadScript(CDN.three);
+    }
+    if (typeof THREE === 'undefined') {
+      throw new Error('Three.js failed to load.');
+    }
+
+    // loaders / controls rely on THREE being present
+    if (typeof THREE.GLTFLoader === 'undefined') {
+      await loadScript(CDN.gltf);
+    }
+    if (typeof THREE.OrbitControls === 'undefined') {
+      await loadScript(CDN.orbit);
+    }
+
+    // GSAP (optional for visual reveals)
+    if (typeof gsap === 'undefined') {
+      await loadScript(CDN.gsap);
+      await loadScript(CDN.scrollTrigger).catch(()=>{}); // optional
+    }
+
+    // Lottie optional
+    if (typeof lottie === 'undefined') {
+      await loadScript(CDN.lottie).catch(()=>{});
+    }
+  } catch (e) {
+    console.warn('Auto-loader error (non-fatal):', e);
+    // still attempt to continue — but if THREE missing we must stop
+    if (typeof THREE === 'undefined') {
+      console.error('Three.js missing — cannot continue.');
+      return;
+    }
+  }
+
+  // --- Now that THREE (and others) are present, initialize the scene ---
+  // Helper to fetch text or null
+  async function fetchText(path) {
     try {
       const r = await fetch(path);
       if (!r.ok) return null;
       return await r.text();
-    } catch(e){
+    } catch (err) {
       return null;
     }
   }
 
-  // try to load external shaders (optional)
   const vertText = await fetchText('coffee-shader.vert');
   const fragText = await fetchText('coffee-shader.frag');
 
@@ -43,18 +107,18 @@
     }
   `;
 
-  // create renderer & scene
+  // Setup renderer and scene
   const canvas = document.getElementById('hero-canvas');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0,0,6);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 0, 6);
 
-  // shader plane
-  const planeGeo = new THREE.PlaneGeometry(16,9,80,80);
+  // plane shader
+  const planeGeo = new THREE.PlaneGeometry(16, 9, 80, 80);
   const planeMat = new THREE.ShaderMaterial({
     vertexShader,
     fragmentShader,
@@ -62,33 +126,33 @@
     side: THREE.DoubleSide
   });
   const plane = new THREE.Mesh(planeGeo, planeMat);
-  plane.scale.set(1.12,1.12,1);
+  plane.scale.set(1.12, 1.12, 1);
   plane.rotation.x = -0.05;
   plane.position.z = -2;
   scene.add(plane);
 
-  // particle field
+  // particles
   const pCount = 420;
   const pGeo = new THREE.BufferGeometry();
   const positions = new Float32Array(pCount * 3);
-  for(let i=0;i<pCount;i++){
-    positions[i*3+0] = (Math.random() - 0.5) * 18;
-    positions[i*3+1] = (Math.random() - 0.5) * 10;
-    positions[i*3+2] = (Math.random() - 0.5) * 8;
+  for (let i = 0; i < pCount; i++) {
+    positions[i * 3 + 0] = (Math.random() - 0.5) * 18;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 8;
   }
   pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   const pMat = new THREE.PointsMaterial({ size: 0.028, transparent: true, opacity: 0.6 });
   const particles = new THREE.Points(pGeo, pMat);
   scene.add(particles);
 
-  // simple lighting for 3D model fallback
+  // lighting
   scene.add(new THREE.AmbientLight(0xffffff, 0.25));
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(5,5,5);
+  dirLight.position.set(5, 5, 5);
   scene.add(dirLight);
 
-  // resize handling
-  function onResize(){
+  // resize
+  function onResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -102,12 +166,17 @@
     mouse.y = (e.clientY / window.innerHeight) * 2 - 1;
   });
 
-  // try load external GLB model; if not present, create fallback geometry
+  // try load GLB model (if present), otherwise fallback
   let floatingObject = null;
-  async function tryLoadModel(){
+  async function tryLoadModel() {
     try {
       const head = await fetch('model.glb', { method: 'HEAD' });
       if (!head.ok) throw new Error('no model');
+      if (typeof THREE.GLTFLoader === 'undefined') {
+        console.warn('GLTFLoader missing, skipping model load');
+        createFallback();
+        return;
+      }
       const loader = new THREE.GLTFLoader();
       loader.load('model.glb', (gltf) => {
         floatingObject = gltf.scene;
@@ -115,15 +184,15 @@
         floatingObject.position.set(0, -0.2, 0);
         scene.add(floatingObject);
       }, undefined, (err) => {
-        console.warn('GLTF load err', err);
+        console.warn('GLTF load error', err);
         createFallback();
       });
-    } catch(e){
+    } catch (e) {
       createFallback();
     }
   }
 
-  function createFallback(){
+  function createFallback() {
     const geo = new THREE.TorusKnotGeometry(0.9, 0.28, 120, 20);
     const mat = new THREE.MeshStandardMaterial({ metalness: 0.12, roughness: 0.35 });
     const mesh = new THREE.Mesh(geo, mat);
@@ -134,9 +203,9 @@
 
   await tryLoadModel();
 
-  // animation loop
+  // animate
   const clock = new THREE.Clock();
-  function anim(){
+  function animate() {
     const t = clock.getElapsedTime();
     planeMat.uniforms.uTime.value = t;
     particles.rotation.y = t * 0.015;
@@ -146,11 +215,11 @@
     }
     camera.position.x += (mouse.x * 0.8 - camera.position.x) * 0.05;
     camera.position.y += (-mouse.y * 0.45 - camera.position.y) * 0.05;
-    camera.lookAt(0,0,0);
+    camera.lookAt(0, 0, 0);
     renderer.render(scene, camera);
-    requestAnimationFrame(anim);
+    requestAnimationFrame(animate);
   }
-  anim();
+  animate();
 
   // floating card microparallax
   const floatingCard = document.getElementById('lottie-placeholder');
@@ -162,7 +231,7 @@
     }
   });
 
-  // try load Lottie animation (logo-lottie.json) if present
+  // try load lottie animation if present
   try {
     const res = await fetch('logo-lottie.json', { method: 'HEAD' });
     if (res.ok && typeof lottie !== 'undefined') {
@@ -174,24 +243,15 @@
         path: 'logo-lottie.json'
       });
     }
-  } catch(e) { /* no lottie present - ignore */ }
+  } catch (e) { /* ignore */ }
 
-  // GSAP content reveals
+  // GSAP reveals (if available)
   if (typeof gsap !== 'undefined') {
-    gsap.registerPlugin(ScrollTrigger);
-    gsap.from(".hero-left .tag", { y: 12, opacity: 0, duration: 0.7, ease: "power3.out" });
-    gsap.from(".hero-left h1", { y: 30, opacity: 0, duration: 1.1, delay: 0.08, ease: "power3.out" });
-    gsap.from(".sub", { y: 18, opacity: 0, duration: 0.9, delay: 0.22 });
-    gsap.from(".hero-actions .btn", { y: 12, opacity: 0, duration: 0.8, delay: 0.36, stagger: 0.08 });
-
-    document.querySelectorAll('.section').forEach((sec)=>{
-      gsap.from(sec.querySelectorAll('h2, .section-sub, .service-card, .project, .price-card, .member, .contact-form, .contact-info'), {
-        scrollTrigger: { trigger: sec, start: "top 80%" },
-        y: 26, opacity: 0, duration: 0.9, stagger: 0.08, ease: "power3.out"
-      });
-    });
-
-    gsap.to(".price-card.recommended", { y: -4, repeat: -1, yoyo: true, ease: "sine.inOut", duration: 2 });
+    try {
+      gsap.registerPlugin && gsap.registerPlugin(ScrollTrigger);
+    } catch(e){/* ignore */}
+    gsap.from && gsap.from(".hero-left .tag", { y: 12, opacity: 0, duration: 0.7, ease: "power3.out" });
+    gsap.from && gsap.from(".hero-left h1", { y: 30, opacity: 0, duration: 1.1, delay: 0.08, ease: "power3.out" });
   }
 
 })();

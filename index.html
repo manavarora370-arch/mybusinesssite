@@ -1,124 +1,176 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#0f0d0a" />
-  <title>Digital ColdBrew — Creative Production & Performance Marketing</title>
+  <title>Digital ColdBrew</title>
 
-  <!-- Primary metadata for sharing -->
-  <meta name="description" content="Digital ColdBrew — creative production, studio shoots, and performance marketing for lifestyle brands." />
-  <meta property="og:title" content="Digital ColdBrew" />
-  <meta property="og:description" content="Creative production, shoots & performance marketing — Digital ColdBrew." />
-  <meta property="og:type" content="website" />
-  <meta property="og:locale" content="en_US" />
-  <link rel="canonical" href="https://your-site-url.example/" />
+  <link rel="stylesheet" href="styles.css" />
 
-  <!-- Favicons (replace with your icons) -->
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <!-- GSAP (we keep available for later animations/sections) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <!-- Fonts: preconnect + load (use Google or local) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Three.js (reliable CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="/styles.css" />
-
-  <!-- Performance: defer scripts (order preserved with defer) -->
-  <!-- Three.js (defer so DOM loads first). Using a CDN version; pin to a version if you prefer. -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-
-  <!-- GSAP (deferred) -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-
-  <!-- Netlify Identity (optional): uncomment if you use Identity -->
-  <!-- <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script> -->
-
-  <!-- Your improved background script (deferred, will run after Three.js) -->
-  <script defer src="/coffee-background.js"></script>
-
-  <!-- Small inline script to polyfill passive listeners only if needed (keeps main scripts small) -->
-  <script>
-    // tiny passive event listener hint — harmless if browser supports passive
-    (function () {
-      try {
-        const opts = Object.defineProperty({}, 'passive', {
-          get: function () { return true; }
-        });
-        window.addEventListener('testPassive', null, opts);
-        window.removeEventListener('testPassive', null, opts);
-      } catch (e) { /* ignore */ }
-    })();
-  </script>
-
-  <!-- SEO: structured data (example JSON-LD; edit before deploying) -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Digital ColdBrew",
-    "url": "https://your-site-url.example/",
-    "logo": "https://your-site-url.example/logo.png",
-    "sameAs": []
-  }
-  </script>
-</head>
-
-<body>
-  <!-- Fullscreen shader canvas (background) -->
-  <canvas id="coffee-canvas" aria-hidden="true"></canvas>
-
-  <!-- App root for React (if your project is React). If not using React, keep the markup below instead. -->
-  <div id="root">
-    <!-- If not using React, you can drop the static markup here (I include markup below in case you have plain HTML site) -->
-  </div>
-
-  <!-- If you are NOT using React and want plain HTML version, include this markup inside #root (uncomment): -->
   <!--
-  <header class="nav" role="banner">
-    <div class="container nav-inner">
-      <a class="brand" href="/">Digital <span>ColdBrew</span></a>
-      <button id="mobile-nav-toggle" class="nav-mobile-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle navigation">
-        ☰
-      </button>
-      <nav id="primary-nav" class="nav-links" role="navigation" aria-label="Primary">
-        <a href="#home">Home</a>
-        <a href="#about">Who we are</a>
-        <a href="#services">Services</a>
-        <a href="#case">Case Studies</a>
-        <a href="#contact">Contact</a>
-        <a class="btn" href="#contact">Work with us</a>
-      </nav>
-    </div>
+    EMBEDDED SHADERS: Putting them in the HTML avoids fetch/MIME issues on GitHub Pages.
+    script.js will look here first; if empty it will fall back to fetching .vert/.frag files
+  -->
+<script id="vertexShader" type="x-shader/x-vertex">
+  // Simple fullscreen vertex shader (DO NOT redeclare 'position' — Three.js already provides it)
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  void main() {
+    // 'position' is provided by Three.js — use it directly
+    gl_Position = vec4(position, 1.0);
+  }
+</script>
+
+
+  <script id="fragmentShader" type="x-shader/x-fragment">
+precision highp float;
+
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_scroll;
+
+// --- helpers ---
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+float fbm(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * noise(p);
+    p *= 2.0;
+    a *= 0.5;
+  }
+  return v;
+}
+
+// smooth circular mask (for subtle center darkening)
+float circleMask(vec2 uv, vec2 center, float radius) {
+  float d = length(uv - center);
+  return smoothstep(radius, radius - 0.12, d);
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+  vec2 aspectUV = uv;
+  aspectUV.x *= u_resolution.x / u_resolution.y; // preserve aspect
+
+  // mouse (fallback to center)
+  vec2 mouse = u_mouse;
+  if (mouse.x < 0.0001 && mouse.y < 0.0001) {
+    mouse = vec2(0.5, 0.5);
+  }
+  // convert mouse to uv-space (same space as uv)
+  vec2 mouseUV = vec2(mouse.x, 1.0 - mouse.y);
+
+  float t = u_time * 0.9;
+  float scrollInfluence = clamp(u_scroll * 0.6, 0.0, 1.5);
+
+  // base gentle undulation using fbm
+  float baseFlow = fbm((aspectUV * 1.8) + vec2(t * 0.08, -t * 0.06));
+
+  // local ripple from mouse movement
+  vec2 diff = aspectUV - mouseUV;
+  float dist = length(diff);
+  float ripple = sin(dist * 45.0 - t * 6.5) * exp(-dist * 6.5);
+
+  // add a few moving layers for viscosity feel
+  float layer1 = fbm((aspectUV * 3.8) + vec2(t * 0.12, -t * 0.09));
+  float layer2 = fbm((aspectUV * 6.5) - vec2(t * 0.06, t * 0.03));
+
+  // combine them
+  float flow = baseFlow * 0.45 + layer1 * 0.28 + layer2 * 0.15 + ripple * 0.9 + scrollInfluence * 0.25;
+
+  // clamp & smooth
+  flow = smoothstep(-0.3, 1.0, flow);
+
+  // coffee color palette
+  vec3 cream = vec3(0.96, 0.93, 0.89);     // background warm cream
+  vec3 caramel = vec3(0.72, 0.50, 0.34);   // mid coffee
+  vec3 espresso = vec3(0.18, 0.09, 0.05);  // deep coffee
+
+  // compute color by blending with flow
+  vec3 coffee = mix(caramel, espresso, clamp(flow * 1.2, 0.0, 1.0));
+  vec3 background = mix(cream, coffee, 0.18);
+
+  // subtle surface highlight (sheen) — guided by flow + a whisper of noise
+  float sheen = (sin((aspectUV.y + t * 0.6) * 25.0) * 0.5 + 0.5) * 0.06;
+  float micro = (fbm(aspectUV * 30.0 + t * 2.0) - 0.5) * 0.02;
+
+  // depth/edge darkening using a circular mask to give volume
+  float mask = circleMask(aspectUV, vec2(0.5 * (u_resolution.x/u_resolution.y), 0.5), 0.9);
+  coffee *= mix(1.0, 0.86, mask * 0.45);
+
+  // final color composition: base background blended with coffee surface and sheen
+  vec3 color = mix(background, coffee, flow * 1.05);
+  color += sheen * flow;
+  color += micro * flow;
+
+  // tiny rim highlight near ripple center
+  float rim = exp(-dist * 14.0) * 0.12;
+  color += vec3(0.04, 0.02, 0.01) * rim;
+
+  // slight gamma
+  color = pow(color, vec3(0.95));
+
+  gl_FragColor = vec4(color, 1.0);
+}
+  </script>
+
+</head>
+<body>
+
+  <!-- Full-page WebGL canvas -->
+  <canvas id="coffee-canvas"></canvas>
+
+  <!-- Content above canvas -->
+  <header class="nav">
+    <div class="brand">Digital <span>ColdBrew</span></div>
+    <nav>
+      <a href="#home">Home</a>
+      <a href="#about">Who we are</a>
+      <a href="#services">Services</a>
+      <a href="#case">Case Studies</a>
+      <a href="#contact">Contact</a>
+    </nav>
   </header>
 
   <main>
-    <section id="home" class="hero container">
-      <div class="hero-inner">
-        <div class="hero-left">
-          <h1>Digital ColdBrew</h1>
-          <p class="lead">Creative production for lifestyle brands — studio, shoots & performance marketing.</p>
-          <p class="mt-16"><a class="btn" href="#contact">Book a call</a></p>
-        </div>
-        <aside class="hero-card">
-          <div class="meta-list">
-            <div class="meta-item"><strong>Studio</strong> Production-ready sets & crew</div>
-            <div class="meta-item"><strong>Marketing</strong> Data-first ads & funnels</div>
-            <div class="meta-item"><strong>Creative</strong> Lifestyle shoots & motion</div>
-          </div>
-        </aside>
-      </div>
+    <section id="home" class="hero">
+      <h1>Digital ColdBrew</h1>
+      <p>Creative production for lifestyle brands — studio, shoots & performance marketing.</p>
     </section>
 
-    <section id="about" class="section container">
-      <div class="section-header"><h2>Who we are</h2></div>
-      <p class="lead">We craft campaigns that blend creativity, storytelling and measurable performance.</p>
+    <section id="about" class="content">
+      <h2>Who we are</h2>
+      <p>We craft campaigns that blend creativity, storytelling and measurable performance.</p>
     </section>
 
-    <section id="services" class="section section--alt container">
+    <section id="services" class="content">
       <h2>Services</h2>
       <ul>
         <li>Social Media Marketing</li>
@@ -128,44 +180,18 @@
       </ul>
     </section>
 
-    <section id="case" class="section container">
+    <section id="case" class="content">
       <h2>Case Studies</h2>
       <p>Coming soon — with real brand campaigns and detailed results.</p>
     </section>
 
-    <section id="contact" class="section container">
+    <section id="contact" class="content">
       <h2>Contact</h2>
-      <p>Email: <a href="mailto:contact@digitalcoldbrew.com">contact@digitalcoldbrew.com</a></p>
+      <p>Email: contact@digitalcoldbrew.com</p>
     </section>
   </main>
 
-  <footer class="footer container">
-    © <span id="year"></span> Digital ColdBrew — All rights reserved.
-  </footer>
-
-  <script>
-    // plain-html fallback small scripts (only if not using React)
-    (function () {
-      // fill copyright year
-      const y = new Date().getFullYear();
-      const el = document.getElementById('year');
-      if (el) el.textContent = y;
-
-      // mobile nav toggle behavior (if using plain HTML)
-      const toggle = document.getElementById('mobile-nav-toggle');
-      const nav = document.getElementById('primary-nav');
-      if (toggle && nav) {
-        toggle.addEventListener('click', function () {
-          const expanded = this.getAttribute('aria-expanded') === 'true';
-          this.setAttribute('aria-expanded', (!expanded).toString());
-          nav.classList.toggle('mobile-open');
-        });
-      }
-    })();
-  </script>
-  -->
-
-  <!-- If you're using React, your bundle (Vite/CRA) will mount into #root and handle markup & JS. -->
-
+  <!-- final script: robust loader will use the embedded shaders if present -->
+  <script src="script.js"></script>
 </body>
 </html>

@@ -1,257 +1,142 @@
-// script.js - robust loader: loads three.js, helpers, gsap, lottie if missing then runs scene
-(async function() {
-  // Utility: load external script and wait until loaded
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      // if already loaded (by exact src), resolve
-      const existing = Array.from(document.scripts).find(s => s.src && s.src.indexOf(src) !== -1);
-      if (existing) {
-        existing.addEventListener('load', () => resolve());
-        if (existing.readyState === 'complete' || existing.readyState === 'loaded') resolve();
-        return;
-      }
-      const s = document.createElement('script');
-      s.src = src;
-      s.async = false; // preserve some ordering
-      s.onload = () => resolve();
-      s.onerror = (e) => reject(new Error('Failed to load ' + src));
-      document.head.appendChild(s);
-    });
+// script.js (final) - robust loader: uses embedded shader tags first, fallback to fetch()
+// Full-page coffee fluid ripple background (mouse + touch + scroll)
+
+let scene, camera, renderer, material, mesh, clock;
+let uniforms = null;
+
+// quick WebGL support check
+function webglSupported() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+  } catch (e) {
+    return false;
+  }
+}
+
+function createRenderer(canvas) {
+  const r = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  r.setSize(window.innerWidth, window.innerHeight);
+  return r;
+}
+
+function loadShadersFromTags() {
+  const vTag = document.getElementById('vertexShader');
+  const fTag = document.getElementById('fragmentShader');
+  if (!vTag || !fTag) return null;
+  const v = vTag.textContent && vTag.textContent.trim().length > 10 ? vTag.textContent : null;
+  const f = fTag.textContent && fTag.textContent.trim().length > 10 ? fTag.textContent : null;
+  if (v && f) return { vert: v, frag: f };
+  return null;
+}
+
+function fetchShaders() {
+  return Promise.all([
+    fetch('coffee-shader.vert').then(r => r.ok ? r.text() : Promise.reject('vert fetch failed')),
+    fetch('coffee-shader.frag').then(r => r.ok ? r.text() : Promise.reject('frag fetch failed'))
+  ]).then(([v, f]) => ({ vert: v, frag: f }));
+}
+
+function initCoffee() {
+  const canvas = document.getElementById('coffee-canvas');
+  if (!canvas) return;
+  if (!webglSupported()) {
+    canvas.style.display = 'none';
+    console.warn('WebGL not supported - canvas hidden.');
+    return;
   }
 
-  // CDN versions used (stable)
-  const CDN = {
-    three: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js',
-    gltf: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/examples/js/loaders/GLTFLoader.js',
-    orbit: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/examples/js/controls/OrbitControls.js',
-    gsap: 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js',
-    scrollTrigger: 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js',
-    lottie: 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js'
+  renderer = createRenderer(canvas);
+  scene = new THREE.Scene();
+  camera = new THREE.Camera();
+  clock = new THREE.Clock();
+
+  // uniforms
+  uniforms = {
+    u_time: { value: 0.0 },
+    u_mouse: { value: new THREE.Vector2(0.5, 0.5) },
+    u_scroll: { value: 0.0 },
+    u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
   };
 
-  // Ensure required libraries exist. If already present, skip load.
-  try {
-    if (typeof THREE === 'undefined') {
-      await loadScript(CDN.three);
-    }
-    if (typeof THREE === 'undefined') {
-      throw new Error('Three.js failed to load.');
-    }
-
-    // loaders / controls rely on THREE being present
-    if (typeof THREE.GLTFLoader === 'undefined') {
-      await loadScript(CDN.gltf);
-    }
-    if (typeof THREE.OrbitControls === 'undefined') {
-      await loadScript(CDN.orbit);
-    }
-
-    // GSAP (optional for visual reveals)
-    if (typeof gsap === 'undefined') {
-      await loadScript(CDN.gsap);
-      await loadScript(CDN.scrollTrigger).catch(()=>{}); // optional
-    }
-
-    // Lottie optional
-    if (typeof lottie === 'undefined') {
-      await loadScript(CDN.lottie).catch(()=>{});
-    }
-  } catch (e) {
-    console.warn('Auto-loader error (non-fatal):', e);
-    // still attempt to continue — but if THREE missing we must stop
-    if (typeof THREE === 'undefined') {
-      console.error('Three.js missing — cannot continue.');
-      return;
-    }
-  }
-
-  // --- Now that THREE (and others) are present, initialize the scene ---
-  // Helper to fetch text or null
-  async function fetchText(path) {
-    try {
-      const r = await fetch(path);
-      if (!r.ok) return null;
-      return await r.text();
-    } catch (err) {
-      return null;
-    }
-  }
-
-  const vertText = await fetchText('coffee-shader.vert');
-  const fragText = await fetchText('coffee-shader.frag');
-
-  const vertexShader = vertText || `
-    varying vec2 vUv;
-    uniform float uTime;
-    void main(){
-      vUv = uv;
-      vec3 p = position;
-      p.z += sin((p.x + uTime*0.8) * 1.6) * 0.25;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
-    }
-  `;
-
-  const fragmentShader = fragText || `
-    varying vec2 vUv;
-    uniform float uTime;
-    void main(){
-      vec2 uv = vUv;
-      float t = uTime * 0.15;
-      vec3 warm = vec3(0.95,0.45,0.38);
-      vec3 mid = vec3(0.22,0.38,0.44);
-      vec3 cool = vec3(0.06,0.12,0.18);
-      float g = smoothstep(0.0,1.0, uv.x + 0.05 * sin(t + uv.y * 4.0));
-      vec3 base = mix(warm, mid, g);
-      base = mix(base, cool, pow(uv.y, 1.6) * 0.6);
-      gl_FragColor = vec4(base, 1.0);
-    }
-  `;
-
-  // Setup renderer and scene
-  const canvas = document.getElementById('hero-canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 0, 6);
-
-  // plane shader
-  const planeGeo = new THREE.PlaneGeometry(16, 9, 80, 80);
-  const planeMat = new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms: { uTime: { value: 0 } },
-    side: THREE.DoubleSide
+  const geometry = new THREE.PlaneGeometry(2, 2);
+  // temporary material while shader loads
+  material = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: 'void main(){ gl_Position = vec4(position,1.0); }',
+    fragmentShader: 'void main(){ gl_FragColor = vec4(0.12,0.08,0.05,1.0); }',
+    depthTest: false
   });
-  const plane = new THREE.Mesh(planeGeo, planeMat);
-  plane.scale.set(1.12, 1.12, 1);
-  plane.rotation.x = -0.05;
-  plane.position.z = -2;
-  scene.add(plane);
 
-  // particles
-  const pCount = 420;
-  const pGeo = new THREE.BufferGeometry();
-  const positions = new Float32Array(pCount * 3);
-  for (let i = 0; i < pCount; i++) {
-    positions[i * 3 + 0] = (Math.random() - 0.5) * 18;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 8;
+  mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+
+  // Try embedded tags first
+  const embedded = loadShadersFromTags();
+  const shaderPromise = embedded ? Promise.resolve(embedded) : fetchShaders();
+
+  shaderPromise.then(sh => {
+    material.vertexShader = sh.vert;
+    material.fragmentShader = sh.frag;
+    material.needsUpdate = true;
+    // start animation if not already
+    if (!animationRunning) startLoop();
+  }).catch(err => {
+    console.warn('Failed to load external shaders, embedded used if present. Error:', err);
+  });
+
+  setupInteraction();
+  // start loop immediately (will show temporary color until shader loaded)
+  if (!animationRunning) startLoop();
+}
+
+let animationRunning = false;
+function startLoop() {
+  animationRunning = true;
+  function loop() {
+    requestAnimationFrame(loop);
+    if (uniforms) uniforms.u_time.value = clock.getElapsedTime();
+    if (renderer && scene && camera) renderer.render(scene, camera);
   }
-  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const pMat = new THREE.PointsMaterial({ size: 0.028, transparent: true, opacity: 0.6 });
-  const particles = new THREE.Points(pGeo, pMat);
-  scene.add(particles);
+  loop();
+}
 
-  // lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(5, 5, 5);
-  scene.add(dirLight);
+// interactions
+function setupInteraction() {
+  // mouse
+  window.addEventListener('mousemove', (e) => {
+    if (!uniforms) return;
+    uniforms.u_mouse.value.set(e.clientX / window.innerWidth, 1 - (e.clientY / window.innerHeight));
+  }, { passive: true });
+
+  // touch
+  window.addEventListener('touchmove', (e) => {
+    if (!uniforms || !e.touches || e.touches.length === 0) return;
+    const t = e.touches[0];
+    uniforms.u_mouse.value.set(t.clientX / window.innerWidth, 1 - (t.clientY / window.innerHeight));
+  }, { passive: true });
+
+  // scroll -> small mapped uniform
+  window.addEventListener('scroll', () => {
+    if (!uniforms) return;
+    const s = window.scrollY || window.pageYOffset || 0;
+    uniforms.u_scroll.value = Math.min(Math.max(s * 0.002, 0), 3.0);
+  }, { passive: true });
 
   // resize
-  function onResize() {
+  window.addEventListener('resize', () => {
+    if (!renderer || !uniforms) return;
     renderer.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-  }
-  window.addEventListener('resize', onResize, { passive: true });
+    uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+  }, { passive: true });
+}
 
-  // mouse parallax
-  const mouse = { x: 0, y: 0 };
-  window.addEventListener('mousemove', (e) => {
-    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = (e.clientY / window.innerHeight) * 2 - 1;
-  });
-
-  // try load GLB model (if present), otherwise fallback
-  let floatingObject = null;
-  async function tryLoadModel() {
-    try {
-      const head = await fetch('model.glb', { method: 'HEAD' });
-      if (!head.ok) throw new Error('no model');
-      if (typeof THREE.GLTFLoader === 'undefined') {
-        console.warn('GLTFLoader missing, skipping model load');
-        createFallback();
-        return;
-      }
-      const loader = new THREE.GLTFLoader();
-      loader.load('model.glb', (gltf) => {
-        floatingObject = gltf.scene;
-        floatingObject.scale.setScalar(1.2);
-        floatingObject.position.set(0, -0.2, 0);
-        scene.add(floatingObject);
-      }, undefined, (err) => {
-        console.warn('GLTF load error', err);
-        createFallback();
-      });
-    } catch (e) {
-      createFallback();
-    }
-  }
-
-  function createFallback() {
-    const geo = new THREE.TorusKnotGeometry(0.9, 0.28, 120, 20);
-    const mat = new THREE.MeshStandardMaterial({ metalness: 0.12, roughness: 0.35 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(0, -0.2, 0);
-    scene.add(mesh);
-    floatingObject = mesh;
-  }
-
-  await tryLoadModel();
-
-  // animate
-  const clock = new THREE.Clock();
-  function animate() {
-    const t = clock.getElapsedTime();
-    planeMat.uniforms.uTime.value = t;
-    particles.rotation.y = t * 0.015;
-    if (floatingObject) {
-      floatingObject.rotation.y += 0.006 + Math.sin(t * 0.12) * 0.002;
-      floatingObject.rotation.x += Math.sin(t * 0.07) * 0.002;
-    }
-    camera.position.x += (mouse.x * 0.8 - camera.position.x) * 0.05;
-    camera.position.y += (-mouse.y * 0.45 - camera.position.y) * 0.05;
-    camera.lookAt(0, 0, 0);
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
-  }
-  animate();
-
-  // floating card microparallax
-  const floatingCard = document.getElementById('lottie-placeholder');
-  window.addEventListener('mousemove', (e) => {
-    const rx = (e.clientX / window.innerWidth) - 0.5;
-    const ry = (e.clientY / window.innerHeight) - 0.5;
-    if (floatingCard) {
-      floatingCard.style.transform = `translate3d(${rx * 18}px, ${ry * 18}px, 0) rotateX(${ -ry * 6 }deg) rotateY(${ rx * 7 }deg)`;
-    }
-  });
-
-  // try load lottie animation if present
+// boot safely
+window.addEventListener('load', () => {
   try {
-    const res = await fetch('logo-lottie.json', { method: 'HEAD' });
-    if (res.ok && typeof lottie !== 'undefined') {
-      lottie.loadAnimation({
-        container: document.getElementById('lottie-placeholder'),
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: 'logo-lottie.json'
-      });
-    }
-  } catch (e) { /* ignore */ }
-
-  // GSAP reveals (if available)
-  if (typeof gsap !== 'undefined') {
-    try {
-      gsap.registerPlugin && gsap.registerPlugin(ScrollTrigger);
-    } catch(e){/* ignore */}
-    gsap.from && gsap.from(".hero-left .tag", { y: 12, opacity: 0, duration: 0.7, ease: "power3.out" });
-    gsap.from && gsap.from(".hero-left h1", { y: 30, opacity: 0, duration: 1.1, delay: 0.08, ease: "power3.out" });
+    initCoffee();
+  } catch (e) {
+    console.error('Coffee init crashed:', e);
   }
-
-})();
+});

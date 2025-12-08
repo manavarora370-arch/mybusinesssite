@@ -45,9 +45,9 @@
       varying float vWave;
       void main(){
         float t = uTime * 0.2;
-        vec3 c1 = vec3(1.0, 0.42, 0.42); // Medium Brown
-        vec3 c2 = vec3(0.43, 0.94, 0.78); // mint
-        vec3 c3 = vec3(0.09, 0.14, 0.18); // dark
+        vec3 c1 = vec3(0.537, 0.318, 0.161); // #895129 primary brown
+        vec3 c2 = vec3(0.780, 0.478, 0.271); // #C77A45 lighter brown (gradient)
+        vec3 c3 = vec3(0.09, 0.14, 0.18);     // keep dark base
         float g = smoothstep(0.0, 1.0, vUv.x + 0.12 * sin(t + vUv.y * 4.0));
         vec3 col = mix(c1, c2, g);
         col = mix(col, c3, pow(vUv.y, 1.8)*0.6);

@@ -7,205 +7,173 @@
 
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- GSAP (optional for future animations) -->
+  <!-- GSAP (we keep available for later animations/sections) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <!-- Three.js -->
+  <!-- Three.js (reliable CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
 
-<!-- =========================================================
-   VERTEX SHADER
-   ========================================================= -->
-<script id="vertexShader" type="x-shader/x-vertex">
-  #ifdef GL_ES
-  precision highp float;
-  #endif
-
-  attribute vec3 position;
-
-  void main() {
-    gl_Position = vec4(position, 1.0);
-  }
-</script>
-
-
-<!-- =========================================================
-   FRAGMENT SHADER (OPTION 3 — LIGHT BEIGE COLD BREW)
-   ========================================================= -->
-<script id="fragmentShader" type="x-shader/x-fragment">
-  precision highp float;
-
-  uniform float u_time;
-  uniform vec2 u_resolution;
-  uniform vec2 u_mouse;
-  uniform float u_scroll;
-
-  // ---------- helpers ----------
-  vec2 hash2(vec2 p) {
-    p = vec2(dot(p, vec2(127.1, 311.7)),
-             dot(p, vec2(269.5,183.3)));
-    return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
-  }
-
-  float noise(vec2 p){
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f*f*(3.0 - 2.0*f);
-
-    return mix(
-      mix(dot(hash2(i + vec2(0.0,0.0)), f - vec2(0.0,0.0)),
-          dot(hash2(i + vec2(1.0,0.0)), f - vec2(1.0,0.0)), u.x),
-      mix(dot(hash2(i + vec2(0.0,1.0)), f - vec2(0.0,1.0)),
-          dot(hash2(i + vec2(1.0,1.0)), f - vec2(1.0,1.0)), u.x),
-      u.y);
-  }
-
-  float fbm(vec2 p){
-    float v = 0.0;
-    float a = 0.5;
-    mat2 m = mat2(1.6,1.2,-1.2,1.6);
-    for(int i=0;i<5;i++){
-      v += a * noise(p);
-      p = m * p * 1.9;
-      a *= 0.5;
+  <!--
+    EMBEDDED SHADERS: Putting them in the HTML avoids fetch/MIME issues on GitHub Pages.
+    script.js will look here first; if empty it will fall back to fetching .vert/.frag files
+  -->
+  <script id="vertexShader" type="x-shader/x-vertex">
+    // Simple fullscreen vertex shader
+    precision highp float;
+    attribute vec3 position;
+    void main() {
+      gl_Position = vec4(position, 1.0);
     }
-    return v;
-  }
+  </script>
 
-  vec2 curlNoise(vec2 p){
-    float e = 0.001;
-    float n1 = fbm(p + vec2(0.0, e));
-    float n2 = fbm(p - vec2(0.0, e));
-    float a = (n1 - n2) / (2.0 * e);
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision highp float;
+    uniform float u_time;
+    uniform vec2 u_resolution;
+    uniform vec2 u_mouse;
+    uniform float u_scroll;
 
-    float n3 = fbm(p + vec2(e, 0.0));
-    float n4 = fbm(p - vec2(e, 0.0));
-    float b = (n3 - n4) / (2.0 * e);
-    return normalize(vec2(a, -b));
-  }
+    // 2D noise - small, fast
+    float hash(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
 
-  float radialMask(vec2 uv, vec2 center, float r){
-    float d = distance(uv, center);
-    return smoothstep(r, r*0.6, d);
-  }
+    float noise(in vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      // four corners
+      float a = hash(i);
+      float b = hash(i + vec2(1.0, 0.0));
+      float c = hash(i + vec2(0.0, 1.0));
+      float d = hash(i + vec2(1.0, 1.0));
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+    }
 
-  // ---------- palette ----------
-  vec3 milk = vec3(0.95, 0.92, 0.88);
-  vec3 lightCoffee = vec3(0.77, 0.63, 0.50);
-  vec3 midCoffee  = vec3(0.62, 0.44, 0.30);
-  vec3 darkCoffee = vec3(0.28, 0.15, 0.08);
+    // fbm for smoother waves
+    float fbm(vec2 p) {
+      float v = 0.0;
+      float a = 0.5;
+      for (int i = 0; i < 5; i++) {
+        v += a * noise(p);
+        p *= 2.0;
+        a *= 0.5;
+      }
+      return v;
+    }
 
-  void main() {
-    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+      // center-correct aspect
+      vec2 center = uv - 0.5;
+      center.x *= u_resolution.x / u_resolution.y;
 
-    vec2 center = uv - 0.5;
-    center.x *= u_resolution.x / u_resolution.y;
+      // interactive ripple center: mouse (normalized)
+      vec2 mouse = u_mouse;
+      // if mouse not set (0,0) then fallback to center
+      if (mouse.x < 0.001 && mouse.y < 0.001) {
+        mouse = vec2(0.5, 0.5);
+      }
+      vec2 m = mouse - vec2(0.0, 1.0) + vec2(0.0); // we'll sample differently below
+      // convert mouse to shader uv-space like gl_FragCoord normalized
+      vec2 mouseUV = vec2(mouse.x, mouse.y);
 
-    vec2 mouse = u_mouse;
-    if(length(mouse) < 0.001) mouse = vec2(0.5, 0.5);
-    vec2 mouseUV = mouse;
+      // scrolling influence (makes waves stronger when user scrolls)
+      float scrollInfluence = clamp(u_scroll * 0.8, 0.0, 1.0);
 
-    float t = u_time * 0.9;
-    float scroll = clamp(u_scroll, 0.0, 1.5);
-    float pour = smoothstep(0.06, 0.9, scroll*1.6);
+      // time
+      float t = u_time * 0.8;
 
-    vec2 flowPos = uv * 2.0 + vec2(0.0, t*0.05);
-    vec2 curl = curlNoise(flowPos * 1.3 + t*0.08);
+      // base ripples from mouse position
+      vec2 diff = uv - mouseUV;
+      float dist = length(diff);
+      float ripple = sin(dist * 40.0 - t * 6.0) * exp(-dist * 6.0);
 
-    curl += vec2(0.0, 0.55 * pour);
+      // add broader fluid motion with fbm
+      float v = fbm((uv * 3.0) + vec2(t * 0.12, t * -0.08));
+      float v2 = fbm((uv * 6.0) - vec2(t * 0.06, t * 0.04));
+      float field = mix(v, v2, 0.5);
 
-    float big = fbm(uv * 1.2 - vec2(0.0, t*0.02));
-    float med = fbm(uv * 3.2 - vec2(t*0.04, -t*0.02));
-    float fine = fbm(uv * 8.0 + vec2(t*0.06, t*0.09));
-    float field = mix(big, med, 0.6) * 0.9 + fine * 0.35;
+      // combine ripple + field + scroll
+      float flow = ripple * 0.9 + field * 0.35 + scrollInfluence * 0.25;
 
-    vec2 d = uv - mouseUV;
-    float dist = length(d) * 1.5;
-    float ripple = sin(dist * 12.0 - t * 2.0) * exp(-dist * 2.8);
+      // color palette: coffee tones (lighter milk + dark espresso)
+      vec3 milk = vec3(0.94, 0.90, 0.84);     // background warm cream
+      vec3 lightCoffee = vec3(0.69, 0.49, 0.34);
+      vec3 darkCoffee = vec3(0.20, 0.10, 0.06);
 
-    vec2 pourOrigin = vec2(0.5, 1.25 - scroll * 1.75);
-    float pourDist = length(uv - pourOrigin);
-    float pourMask = smoothstep(0.45, 0.12, pourDist * (1.0 + scroll*2.2));
+      // compute smooth blend factor
+      float blend = smoothstep(-0.25, 0.6, flow);
 
-    float stream = smoothstep(0.0, 0.9, (1.2 - (uv.y + scroll*0.8))) * 0.55;
+      // use flow (with slight offset) to blend between milk and coffee
+      vec3 color = mix(milk, mix(lightCoffee, darkCoffee, clamp(flow*1.2,0.0,1.0)), blend);
 
-    float flow = (field * 0.9) + (ripple * 0.6) + (stream * pourMask * 1.2);
+      // subtle surface sheen: add small specular-ish highlight using noise
+      float spec = 0.0;
+      spec += 0.02 * sin((uv.y + t*0.6) * 30.0) * (1.0 - dist);
+      color += spec;
 
-    vec2 disp = curl * (0.02 + flow * 0.04);
+      // gamma
+      color = pow(color, vec3(0.95));
 
-    float flow2 = fbm((uv + disp) * 3.0 + t*0.03);
-
-    float blend = smoothstep(-0.2, 0.5, flow2);
-
-    vec3 base = mix(milk, lightCoffee, smoothstep(0.0, 0.35, flow2));
-    vec3 midcol = mix(base, midCoffee, smoothstep(0.2, 0.6, flow2));
-    vec3 finalCol = mix(midcol, darkCoffee, smoothstep(0.5, 0.95, flow2));
-
-    float sheen = 0.03 * (1.0 - smoothstep(0.2, 0.9, flow));
-    sheen *= (0.6 + 0.4 * sin(t*1.8 + uv.x*6.0));
-
-    finalCol += sheen;
-
-    float vign = smoothstep(0.9, 0.3, length(center) * 1.05);
-    finalCol = mix(finalCol, milk, vign * 0.08);
-
-    finalCol = pow(finalCol, vec3(0.98));
-
-    gl_FragColor = vec4(finalCol, 1.0);
-  }
-</script>
+      gl_FragColor = vec4(color, 1.0);
+    }
+  </script>
 
 </head>
-
 <body>
 
-<canvas id="coffee-canvas"></canvas>
+  <!-- Full-page WebGL canvas -->
+  <canvas id="coffee-canvas"></canvas>
 
-<header class="nav">
-  <div class="brand">Digital <span>ColdBrew</span></div>
-  <nav>
-    <a href="#home">Home</a>
-    <a href="#about">Who we are</a>
-    <a href="#services">Services</a>
-    <a href="#case">Case Studies</a>
-    <a href="#contact">Contact</a>
-  </nav>
-</header>
+  <!-- Content above canvas -->
+  <header class="nav">
+    <div class="brand">Digital <span>ColdBrew</span></div>
+    <nav>
+      <a href="#home">Home</a>
+      <a href="#about">Who we are</a>
+      <a href="#services">Services</a>
+      <a href="#case">Case Studies</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
 
-<main>
-  <section id="home" class="hero">
-    <h1>Digital ColdBrew</h1>
-    <p>Creative production for lifestyle brands — studio, shoots & performance marketing.</p>
-  </section>
+  <main>
+    <section id="home" class="hero">
+      <h1>Digital ColdBrew</h1>
+      <p>Creative production for lifestyle brands — studio, shoots & performance marketing.</p>
+    </section>
 
-  <section id="about" class="content">
-    <h2>Who we are</h2>
-    <p>We craft campaigns that blend creativity, storytelling and measurable performance.</p>
-  </section>
+    <section id="about" class="content">
+      <h2>Who we are</h2>
+      <p>We craft campaigns that blend creativity, storytelling and measurable performance.</p>
+    </section>
 
-  <section id="services" class="content">
-    <h2>Services</h2>
-    <ul>
-      <li>Social Media Marketing</li>
-      <li>Brand Strategy</li>
-      <li>Product Shoot & Video Production</li>
-      <li>Performance Marketing</li>
-    </ul>
-  </section>
+    <section id="services" class="content">
+      <h2>Services</h2>
+      <ul>
+        <li>Social Media Marketing</li>
+        <li>Brand Strategy</li>
+        <li>Product Shoot & Video Production</li>
+        <li>Performance Marketing</li>
+      </ul>
+    </section>
 
-  <section id="case" class="content">
-    <h2>Case Studies</h2>
-    <p>Coming soon — with real brand campaigns and detailed results.</p>
-  </section>
+    <section id="case" class="content">
+      <h2>Case Studies</h2>
+      <p>Coming soon — with real brand campaigns and detailed results.</p>
+    </section>
 
-  <section id="contact" class="content">
-    <h2>Contact</h2>
-    <p>Email: contact@digitalcoldbrew.com</p>
-  </section>
-</main>
+    <section id="contact" class="content">
+      <h2>Contact</h2>
+      <p>Email: contact@digitalcoldbrew.com</p>
+    </section>
+  </main>
 
-<script src="script.js"></script>
-
+  <!-- final script: robust loader will use the embedded shaders if present -->
+  <script src="script.js"></script>
 </body>
 </html>
